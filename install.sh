@@ -43,6 +43,7 @@ if ! py=$(find_python); then
   fi
   printf '  Install it now with: %s ? [y/N] ' "$cmd"
   read -r answer || answer=""
+  answer=${answer//$'\r'/} # Git Bash on Windows can read "y\r"
   case $answer in
     y | Y | yes | Yes) $cmd || { echo "The Python install failed. Exit code $?."; exit 1; } ;;
     *) echo "Install Python 3, then run ./install.sh again."; exit 1 ;;

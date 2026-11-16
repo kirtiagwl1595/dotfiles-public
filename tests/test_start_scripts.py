@@ -170,3 +170,11 @@ def test_windows_scripts_run_install_py_check(tmp_path, script):
     # PowerShell keeps its own cache in the home folder; install.py writes nothing
     assert not (tmp_path / ".claude").exists()
     assert not (tmp_path / ".gitconfig").exists()
+
+
+def test_sh_takes_a_yes_with_a_windows_line_end(tmp_path):
+    # Git Bash on Windows can get "y\r" from a pipe or a terminal
+    log = tmp_path / "log"
+    stubs = stub_dir(tmp_path, brew=recorder(log))
+    run_sh(tmp_path, str(stubs), answers="y\r\n")
+    assert "brew install python" in log.read_text(encoding="utf-8")

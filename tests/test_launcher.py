@@ -137,13 +137,23 @@ def test_launcher_has_unix_line_ends():
 
 def test_launcher_passes_the_arguments_after_the_script(tmp_path):
     # The setup-repo skill runs `py.sh ../repo_setup.py apply <repo>`: apply must arrive
-    show = tmp_path / "show_args.py"
-    show.write_text("import sys; print(sys.argv[1:])\n", encoding="utf-8")
+    # A copy of the plugin layout in tmp_path: a path from the repo to tmp_path can cross
+    # drives on Windows (D: to C:), and relpath fails there
+    (tmp_path / "hooks").mkdir()
+    shutil.copyfile(PY_SH, tmp_path / "hooks" / "py.sh")
+    (tmp_path / "show_args.py").write_text(
+        "import sys; print(sys.argv[1:])\n", encoding="utf-8"
+    )
     env = env_for()
     env["PATH"] = str(real_python(tmp_path))
-    rel = os.path.relpath(show, HOOKS).replace(os.sep, "/")
     p = subprocess.run(
-        [bash_exe(), str(PY_SH), rel, "apply", "a b"],
+        [
+            bash_exe(),
+            str(tmp_path / "hooks" / "py.sh"),
+            "../show_args.py",
+            "apply",
+            "a b",
+        ],
         capture_output=True,
         text=True,
         encoding="utf-8",

@@ -23,6 +23,7 @@ To update: `git pull`, then `./install.sh` (Windows: `.\install.cmd`), then rest
 
 ### Fixed
 - `claude/hooks/py.sh` passes the arguments after the script name. Before, a skill script got none.
+- `install.sh` takes a `y` that ends in `\r` (Git Bash on Windows) as a yes.
 
 ## [0.1.0] - 2026-11-16
 
