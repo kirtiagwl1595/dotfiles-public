@@ -1,0 +1,5 @@
+
+[tool.pytest.ini_options]
+# Short output saves Claude's context; evals cost tokens, so they run only with `pytest -m eval`.
+addopts = "-q --tb=short -m 'not eval'"
+markers = ["eval: scores the project on evals/cases.jsonl (may call an LLM)"]

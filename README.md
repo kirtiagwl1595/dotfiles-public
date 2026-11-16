@@ -12,6 +12,9 @@ This repo adds:
 - **Safe settings**: in default mode, Claude asks before every command outside the sandbox. Bypass mode is off. Auto mode is available with shift+tab; each session starts in default mode.
 - **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
 - **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
+- **Skills** in the same plugin: `setup-repo`, `token-report` and `ste-visual-first`. See "Skills".
+
+What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
 The install adds to your setup. It never removes your own values. It asks before it replaces a weaker safety value, before it changes PATH, and before it installs a tool.
 
@@ -96,6 +99,18 @@ All guards run on every OS. They match paths in any case, with `\` or `/`, and w
 
 Every guard starts through `claude/hooks/py.sh`. When it finds no working Python 3.9+, it blocks the tool call (exit 2). A guard that crashes denies the call.
 
+## Skills
+
+The plugin brings these skills. In Claude Code, type the name with a `/`, or ask for the task in your own words.
+
+| Skill | What it does |
+|---|---|
+| `/setup-repo` | Makes the current repo Claude-forward: a managed `.gitignore` block, `.claude/settings.json` (no Bash allow rules on Windows), a quiet pytest block, a project `CLAUDE.md`. It commits on `chore/claude-forward` and asks before push and PR. A team repo (its `origin` is not under your user name) gets only local, ignored files. Helpers: `claude/repo_setup.py`, `claude/forge.sh` (picks `gh` or `glab` from `origin`). |
+| `/token-report` | Your Claude Code token use and cost. |
+| `/ste-visual-first` | Picks a table or a diagram over long text. |
+
+`setup-repo` writes `.git/config` and `.claude/settings.json`, which the sandbox denies. Claude runs those single commands outside the sandbox, and each one asks you.
+
 ## Verify
 
 Do these checks in Claude Code after the restart.
@@ -107,6 +122,7 @@ Do these checks in Claude Code after the restart.
 | Windows: ask Claude to list the files here | An approval prompt. |
 | macOS, Linux: ask Claude to run `git status` | It runs with no prompt (in the sandbox). |
 | macOS, Linux: ask Claude to run `gh auth status` | An approval prompt (`gh` runs outside the sandbox). |
+| Type `/setup-repo` | The skill is in the list (`safe-lean:setup-repo`). |
 
 ## Failure scenarios
 

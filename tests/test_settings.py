@@ -176,3 +176,13 @@ def test_hf_token_files_are_hidden_from_sandboxed_commands(path):
 def test_hf_token_env_vars_are_hidden(name):
     env = SANDBOX["sandbox"]["credentials"]["envVars"]
     assert {"name": name, "mode": "deny"} in env
+
+
+@pytest.mark.parametrize("cmd", ["*forge.sh pr-create*"])
+def test_opening_a_pr_through_forge_asks(cmd):
+    assert f"Bash({cmd})" in rules(BASE, "ask")
+
+
+def test_forge_runs_outside_the_sandbox():
+    # forge.sh calls gh and glab, which read their token from the keychain
+    assert "*/forge.sh *" in SANDBOX["sandbox"]["excludedCommands"]
