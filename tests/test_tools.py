@@ -225,3 +225,15 @@ def test_windows_path_is_made_when_there_is_none():
     reg = FakeWinreg(None)
     install.add_to_windows_path(r"C:\Users\me\.local\bin", reg, lambda: None)
     assert reg.writes == [("Path", reg.REG_EXPAND_SZ, r"C:\Users\me\.local\bin")]
+
+
+def test_a_shared_install_command_is_named_once_for_each_tool(monkeypatch, capsys):
+    # bwrap and socat come from one apt-get command: one question, a line for each tool
+    monkeypatch.setattr(install, "installer", lambda name: ["sudo", "apt-get", "x"])
+    report = install.Report(check=True)
+    offered = set()
+    install.offer_install(report, "bwrap", offered)
+    install.offer_install(report, "socat", offered)
+    out = capsys.readouterr().out
+    assert out.count("sudo apt-get x") == 2
+    assert "bwrap" in out and "socat" in out

@@ -20,6 +20,9 @@ To update: `git pull`, then `./install.sh` (Windows: `.\install.cmd`), then rest
 - Auto mode is allowed: it is in the shift+tab cycle. Each session still starts in default mode, and bypass mode stays off.
 - An older install left `permissions.disableAutoMode: "disable"`. `install.py` asks before it removes it.
 
+### Fixed
+- `claude/hooks/py.sh` passes the arguments after the script name. Before, a skill script got none.
+
 ## [0.1.0] - 2026-11-16
 
 ### Added

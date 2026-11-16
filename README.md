@@ -161,4 +161,5 @@ From the Claude Code docs (checked 2026-11-16):
 - The sandbox runs on macOS, Linux and WSL2, not on native Windows. Without `bubblewrap` and `socat` it runs unsandboxed, unless `sandbox.failIfUnavailable` is on.
 - `autoAllowBashIfSandboxed` is off by default. A `dangerouslyDisableSandbox` retry and an excluded command get the normal prompt in default mode, unless an allow rule matches.
 - `permissions.disableBypassPermissionsMode: "disable"` turns bypass mode off. Without `permissions.disableAutoMode`, auto mode is in the shift+tab cycle; `defaultMode: "default"` keeps it from being the start mode.
+- Install commands for Claude Code (setup page, checked 2026-11-16): `brew install --cask claude-code`, `winget install Anthropic.ClaudeCode`, or the native installer (`https://claude.ai/install.sh`, Windows `https://claude.ai/install.ps1`). The native installer puts `claude` in `~/.local/bin`; if the shell does not find it, that folder is not on PATH.
 - Not documented: whether a deny rule like `Read(~/.ssh/**)` matches a Windows path with `\`. The guards cover it either way; the Windows CI job tests the guards.

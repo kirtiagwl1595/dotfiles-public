@@ -262,8 +262,9 @@ def offer_install(report, name, offered):
         report.line("missing", f"{name}. Fix: {FIXES[name].get(SYSTEM, '')}")
         return False
     text = " ".join(cmd)
-    if text in offered:  # bwrap and socat come from one command
-        return bool(shutil.which(name) or off_path(name))
+    if text in offered:  # bwrap and socat come from one command: ask once
+        report.line("missing", f"{name}. Same install command as above: {text}")
+        return not report.check  # after a run, the caller looks for the tool again
     offered.add(text)
     if report.check:
         report.line("would", f"install {name}: {text}")
