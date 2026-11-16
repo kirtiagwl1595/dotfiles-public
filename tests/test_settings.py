@@ -120,3 +120,59 @@ def test_every_rule_is_well_formed():
 def test_network_allowlist_has_no_wildcard_for_everything():
     domains = SANDBOX["sandbox"]["network"]["allowedDomains"]
     assert domains and "*" not in domains
+
+
+@pytest.mark.parametrize(
+    "rule",
+    [
+        "Bash(glab mr create:*)",
+        "Bash(glab mr merge:*)",
+        "Bash(glab mr close:*)",
+        "Bash(glab mr note:*)",
+        "Bash(glab issue create:*)",
+        "Bash(glab issue note:*)",
+        "Bash(glab release create:*)",
+        "Bash(glab repo create:*)",
+        "Bash(glab repo delete:*)",
+        "Bash(glab api *-X *)",
+        "Bash(glab api *--method*)",
+        "Bash(glab api * -f *)",
+        "Bash(glab api * -F *)",
+        "Bash(glab api *--field*)",
+        "Bash(glab api *--raw-field*)",
+        "Bash(glab api *--input*)",
+        "Bash(*hf upload*)",
+        "Bash(*hf repos*)",
+        "Bash(*hf auth*)",
+        "Artifact",
+        "mcp__claude_ai_Gmail__*",
+        "mcp__claude_ai_Google_Drive__*",
+        "mcp__claude_ai_Google_Calendar__*",
+    ],
+)
+def test_outward_gitlab_hf_and_connector_actions_ask(rule):
+    assert rule in rules(BASE, "ask")
+
+
+@pytest.mark.parametrize("cmd", ["*hf auth login*", "*hf.co/cli/install.sh*"])
+def test_hf_login_and_its_install_script_are_denied(cmd):
+    assert f"Bash({cmd})" in rules(BASE, "deny")
+
+
+def test_glab_runs_outside_the_sandbox_like_gh():
+    # glab reads its token from the keychain, which the sandbox hides
+    assert "glab *" in SANDBOX["sandbox"]["excludedCommands"]
+
+
+@pytest.mark.parametrize(
+    "path", ["~/.cache/huggingface/token", "~/.cache/huggingface/stored_tokens"]
+)
+def test_hf_token_files_are_hidden_from_sandboxed_commands(path):
+    files = SANDBOX["sandbox"]["credentials"]["files"]
+    assert {"path": path, "mode": "deny"} in files
+
+
+@pytest.mark.parametrize("name", ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"])
+def test_hf_token_env_vars_are_hidden(name):
+    env = SANDBOX["sandbox"]["credentials"]["envVars"]
+    assert {"name": name, "mode": "deny"} in env

@@ -17,7 +17,7 @@
     "failIfUnavailable": true,
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": true,
-    "excludedCommands": ["gh *"],
+    "excludedCommands": ["gh *", "glab *"],
     "enableWeakerNestedSandbox": false,
     "enableWeakerNetworkIsolation": false,
     "filesystem": {
@@ -54,7 +54,9 @@
         { "path": "~/.npmrc", "mode": "deny" },
         { "path": "~/.config/gh/hosts.yml", "mode": "deny" },
         { "path": "~/.claude/.credentials.json", "mode": "deny" },
-        { "path": "~/.claude.json", "mode": "deny" }
+        { "path": "~/.claude.json", "mode": "deny" },
+        { "path": "~/.cache/huggingface/token", "mode": "deny" },
+        { "path": "~/.cache/huggingface/stored_tokens", "mode": "deny" }
       ],
       "envVars": [
         { "name": "GH_TOKEN", "mode": "deny" },
@@ -63,7 +65,8 @@
         { "name": "ANTHROPIC_API_KEY", "mode": "deny" },
         { "name": "AWS_ACCESS_KEY_ID", "mode": "deny" },
         { "name": "AWS_SECRET_ACCESS_KEY", "mode": "deny" },
-        { "name": "HF_TOKEN", "mode": "deny" }
+        { "name": "HF_TOKEN", "mode": "deny" },
+        { "name": "HUGGING_FACE_HUB_TOKEN", "mode": "deny" }
       ]
     },
     "network": {
