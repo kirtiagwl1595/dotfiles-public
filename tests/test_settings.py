@@ -183,6 +183,19 @@ def test_opening_a_pr_through_forge_asks(cmd):
     assert f"Bash({cmd})" in rules(BASE, "ask")
 
 
-def test_forge_runs_outside_the_sandbox():
-    # forge.sh calls gh and glab, which read their token from the keychain
-    assert "*/forge.sh *" in SANDBOX["sandbox"]["excludedCommands"]
+def test_plugin_update_asks():
+    assert "Bash(claude plugin update:*)" in rules(BASE, "ask")
+
+
+def excluded(command):
+    return any(
+        fnmatch.fnmatchcase(command, p) for p in SANDBOX["sandbox"]["excludedCommands"]
+    )
+
+
+def test_only_the_plugin_copy_of_forge_runs_outside_the_sandbox():
+    cache = "/Users/me/.claude/plugins/cache/dotfiles-public/safe-lean/0.2.0"
+    assert excluded(f'bash "{cache}/forge.sh" pr-create --title T --body-file b')
+    # A forge.sh from a cloned repo stays in the sandbox
+    assert not excluded("bash ./x/forge.sh kind")
+    assert not excluded("bash /tmp/evil/forge.sh pr-create")

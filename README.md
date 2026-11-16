@@ -70,7 +70,7 @@ The install adds to your setup. It never removes your own values. It asks before
 | `~/.claude/CLAUDE.md` | Two import lines at the top: `claude/CLAUDE.md` (shared rules) and `claude/CLAUDE.style.md` (writing style). Your own text stays below. |
 | `~/.claude/settings.json` | Adds `claude/settings.base.json`; on macOS and Linux also `claude/settings.sandbox.json`. Your values win, except where you answer `y`. Removes `permissions.disableAutoMode` from an older install only when you answer `y`. |
 | `~/.gitconfig` | An `[include]` of `git/config.shared` at the top, so your own values win. Sets `core.excludesFile` only when you have none. Never sets your name, email, signing key or credential helper. |
-| Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. |
+| Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. When the cached plugin copy is older than `claude/.claude-plugin/plugin.json` (after a `git pull`), it asks, then runs `claude plugin update safe-lean@dotfiles-public`. |
 | PATH (only on `y`) | A tool that is installed but not on PATH (for example `~/.local/bin/claude`): macOS and Linux get a `# >>> dotfiles-public PATH >>>` block in `~/.zshrc`, `~/.bash_profile` (bash on macOS), `~/.bashrc` (bash on Linux) or `~/.profile`. Windows gets the folder in the user PATH (registry, not `setx`). |
 | Tools (only on `y`) | A missing tool is installed with the first that it finds: `winget`, `brew`, `apt-get` (with `sudo`). Claude Code without `winget` or `brew`: the installer from the Claude Code setup page. git on macOS without `brew`: `xcode-select --install`. `--skip-tools` only reports. |
 
@@ -80,7 +80,7 @@ The install adds to your setup. It never removes your own values. It asks before
 |---|---|
 | macOS, Linux: inside the sandbox | Runs with no question. The sandbox limits files and network. |
 | macOS, Linux: outside the sandbox (Claude retries with `dangerouslyDisableSandbox`, or a `gh` or `glab` command) | Claude asks you. No allow rule skips the question. |
-| Windows (no sandbox) | Claude asks you for every command. |
+| Windows (no sandbox), default mode | Claude asks you for every command. |
 | Any OS: a command that matches an ask rule (`git push`, `glab mr create`, `hf upload`, `rm`, `Remove-Item`, `winget install`, ...), or publishing an artifact or using a Google connector | Claude asks you. |
 | Any OS: a command that a guard or a deny rule blocks | Claude cannot run it. |
 | Any OS, auto mode (you select it with shift+tab) | A classifier approves or blocks each action instead of you. Deny rules and guards still apply. On Windows, nothing else is between Claude and the shell. |

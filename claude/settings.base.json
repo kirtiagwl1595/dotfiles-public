@@ -62,6 +62,7 @@
       "Bash(claude plugin disable:*)",
       "Bash(claude plugin install:*)",
       "Bash(claude plugin uninstall:*)",
+      "Bash(claude plugin update:*)",
       "Bash(claude plugin marketplace add:*)",
       "Bash(glab mr create:*)",
       "Bash(glab repo create:*)",

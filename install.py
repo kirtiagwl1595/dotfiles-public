@@ -598,6 +598,32 @@ def setup_plugin(report):
                 report.fail(f"claude {' '.join(cmd)}: {out.strip()[:300]}")
             else:
                 report.line("changed", "claude " + " ".join(cmd))
+    update_plugin(report, exe)
+
+
+def plugin_version():
+    path = CLAUDE_SRC / ".claude-plugin" / "plugin.json"
+    return json.loads(path.read_text(encoding="utf-8"))["version"]
+
+
+def update_plugin(report, exe):
+    """Claude Code runs a cached copy per version: after a git pull, the old copy stays."""
+    cache = Path.home() / ".claude" / "plugins" / "cache" / MARKETPLACE / PLUGIN
+    version = plugin_version()
+    if not cache.is_dir() or (cache / version).is_dir():
+        return
+    cmd = ("plugin", "update", f"{PLUGIN}@{MARKETPLACE}")
+    text = "claude " + " ".join(cmd)
+    if report.check:
+        report.line("would", f"run: {text} (the plugin copy is older than {version})")
+    elif ask(f"The {PLUGIN} plugin copy is older than {version}.", f"Run {text} ?"):
+        code, out = claude_cli(exe, *cmd)
+        if code:
+            report.fail(f"{text}: {out.strip()[:300]}")
+        else:
+            report.line("changed", f"{text}. Restart Claude Code.")
+    else:
+        report.line("kept", f"old {PLUGIN} copy. Later: {text}")
 
 
 def main():

@@ -226,3 +226,77 @@ def test_plugin_is_added_from_the_clone(tmp_path):
     calls = log.read_text().splitlines()
     assert f"plugin marketplace add {(ROOT / 'claude').as_posix()}" in calls
     assert "plugin install safe-lean@dotfiles-public" in calls
+
+
+def stub_claude_with_plugin(tmp_path, log):
+    """A claude that says safe-lean is installed, and logs every call."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "claude"
+    stub.write_text(
+        f'#!/bin/sh\necho "$@" >> "{log}"\necho "dotfiles-public safe-lean@dotfiles-public"\n'
+    )
+    stub.chmod(0o755)
+    return bin_dir
+
+
+def cached_version(home, version):
+    (home / ".claude/plugins/cache/dotfiles-public/safe-lean" / version).mkdir(
+        parents=True
+    )
+
+
+PLUGIN_VERSION = json.loads(
+    (ROOT / "claude/.claude-plugin/plugin.json").read_text(encoding="utf-8")
+)["version"]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stub claude is a shell script")
+@pytest.mark.parametrize("answer, updated", [("y\n", True), ("", False)])
+def test_an_old_plugin_copy_is_updated_on_yes(tmp_path, answer, updated):
+    # Claude Code runs a cached copy per version: a git pull alone keeps the old one
+    log = tmp_path / "claude.log"
+    home = tmp_path / "home"
+    home.mkdir()
+    cached_version(home, "0.0.1")
+    code, out = install(
+        home,
+        "--skip-tools",
+        answers=answer,
+        path_prefix=stub_claude_with_plugin(tmp_path, log),
+    )
+    assert code == 0, out
+    assert ("plugin update safe-lean@dotfiles-public" in log.read_text()) is updated
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stub claude is a shell script")
+def test_the_current_plugin_copy_is_not_updated(tmp_path):
+    log = tmp_path / "claude.log"
+    home = tmp_path / "home"
+    home.mkdir()
+    cached_version(home, PLUGIN_VERSION)
+    code, out = install(
+        home,
+        "--skip-tools",
+        answers="y\n",
+        path_prefix=stub_claude_with_plugin(tmp_path, log),
+    )
+    assert code == 0, out
+    assert "plugin update" not in log.read_text()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the stub claude is a shell script")
+def test_check_names_the_plugin_update_and_runs_nothing(tmp_path):
+    log = tmp_path / "claude.log"
+    home = tmp_path / "home"
+    home.mkdir()
+    cached_version(home, "0.0.1")
+    code, out = install(
+        home,
+        "--check",
+        "--skip-tools",
+        path_prefix=stub_claude_with_plugin(tmp_path, log),
+    )
+    assert code == 0, out
+    assert "claude plugin update safe-lean@dotfiles-public" in out
+    assert "plugin update" not in log.read_text()

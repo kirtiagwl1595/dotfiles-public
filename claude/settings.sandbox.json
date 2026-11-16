@@ -17,7 +17,11 @@
     "failIfUnavailable": true,
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": true,
-    "excludedCommands": ["gh *", "glab *", "*/forge.sh *"],
+    "excludedCommands": [
+      "gh *",
+      "glab *",
+      "*/.claude/plugins/cache/dotfiles-public/safe-lean/*/forge.sh*"
+    ],
     "enableWeakerNestedSandbox": false,
     "enableWeakerNetworkIsolation": false,
     "filesystem": {

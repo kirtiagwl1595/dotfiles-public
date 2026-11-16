@@ -11,10 +11,11 @@ To update: `git pull`, then `./install.sh` (Windows: `.\install.cmd`), then rest
 - `install.py` finds a tool that is installed but not on PATH (for example `~/.local/bin/claude`). On a yes, it adds the folder to PATH: a managed block in your shell file, or the Windows user PATH.
 - `install.py` offers to install a missing tool (`git`, `claude`, Git Bash, `bubblewrap`, `socat`) with `winget`, `brew`, `apt-get` or the Claude Code installer. It asks first; `--check` only shows the command.
 - `install.py --skip-tools`: only report the tools.
+- `install.py` finds an old cached copy of the plugin (Claude Code keeps one per version) and, on a yes, runs `claude plugin update safe-lean@dotfiles-public`. Without it, a `git pull` alone keeps the old skills.
 - The `setup-repo` skill, with `claude/repo_setup.py`, `claude/forge.sh` and `claude/templates/`. It makes a repo Claude-forward on branch `chore/claude-forward` and asks before push and PR. On Windows it writes no Bash allow rules.
-- Ask rules: GitLab writes (`glab mr create`, `glab api -X ...` and more), Hugging Face writes (`hf upload` and more), `forge.sh pr-create`, publishing an artifact, and the Gmail, Google Drive and Google Calendar connectors.
+- Ask rules: `claude plugin update`, GitLab writes (`glab mr create`, `glab api -X ...` and more), Hugging Face writes (`hf upload` and more), `forge.sh pr-create`, publishing an artifact, and the Gmail, Google Drive and Google Calendar connectors.
 - Deny rules: `hf auth login` and the Hugging Face CLI install script.
-- Sandbox: `glab` and `forge.sh` run outside it (they need the keychain), so they ask. Hugging Face token files and `HUGGING_FACE_HUB_TOKEN` are hidden from sandboxed commands.
+- Sandbox: `glab` and the plugin's own `forge.sh` run outside it (they need the keychain), so they ask. A `forge.sh` from anywhere else stays in the sandbox. Hugging Face token files and `HUGGING_FACE_HUB_TOKEN` are hidden from sandboxed commands.
 
 ### Changed
 - Auto mode is allowed: it is in the shift+tab cycle. Each session still starts in default mode, and bypass mode stays off.
