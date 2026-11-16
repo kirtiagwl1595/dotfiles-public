@@ -1,0 +1,4 @@
+target-version = "py39"
+
+[lint]
+extend-select = ["UP", "B"]

@@ -1,0 +1,8 @@
+{
+  "name": "safe-lean",
+  "version": "0.1.0",
+  "description": "Guards for macOS, Linux and Windows: secrets, private terms, pip, main branch and compound-command checks, for the Bash and PowerShell tools and the file tools. Skills: ste-visual-first and token-report.",
+  "author": {
+    "name": "kirtiagwl1595"
+  }
+}

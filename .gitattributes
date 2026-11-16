@@ -1,0 +1,4 @@
+# A CRLF checkout on Windows breaks bash scripts: the guards would then fail open
+*.sh text eol=lf
+*.py text eol=lf
+*.json text eol=lf

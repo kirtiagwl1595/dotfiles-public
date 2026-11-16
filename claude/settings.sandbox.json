@@ -1,0 +1,82 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(ls:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(ruff check:*)",
+      "Bash(uv run ruff check:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": true,
+    "excludedCommands": ["gh *"],
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "filesystem": {
+      "allowRead": [
+        "~/.cache/uv",
+        "~/.local/share/uv/python",
+        "~/.local/share/uv/tools",
+        "~/.local/bin",
+        "~/.cache/pre-commit"
+      ],
+      "allowWrite": ["~/.cache/uv", "~/.cache/pre-commit"],
+      "denyWrite": [
+        "~/.ssh",
+        "~/.aws",
+        "~/.gnupg",
+        "~/.azure",
+        "~/.kube",
+        "~/.docker/config.json",
+        "~/.pypirc",
+        "~/.config/gh",
+        "~/.config/glab-cli",
+        "~/.git-credentials",
+        "~/.netrc",
+        "~/.npmrc",
+        "~/.claude/.credentials.json",
+        "~/.claude.json"
+      ]
+    },
+    "credentials": {
+      "files": [
+        { "path": "~/.aws/credentials", "mode": "deny" },
+        { "path": "~/.git-credentials", "mode": "deny" },
+        { "path": "~/.netrc", "mode": "deny" },
+        { "path": "~/.npmrc", "mode": "deny" },
+        { "path": "~/.config/gh/hosts.yml", "mode": "deny" },
+        { "path": "~/.claude/.credentials.json", "mode": "deny" },
+        { "path": "~/.claude.json", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "GITLAB_TOKEN", "mode": "deny" },
+        { "name": "ANTHROPIC_API_KEY", "mode": "deny" },
+        { "name": "AWS_ACCESS_KEY_ID", "mode": "deny" },
+        { "name": "AWS_SECRET_ACCESS_KEY", "mode": "deny" },
+        { "name": "HF_TOKEN", "mode": "deny" }
+      ]
+    },
+    "network": {
+      "allowLocalBinding": false,
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "*.githubusercontent.com",
+        "gitlab.com",
+        "pypi.org",
+        "files.pythonhosted.org",
+        "ghcr.io"
+      ]
+    }
+  }
+}

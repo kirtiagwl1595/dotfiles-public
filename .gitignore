@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.bak
+# Claude Code: personal, per clone
+.claude/lessons/
+.claude/.cc-writes/
+.claude/settings.local.json
+CLAUDE.local.md
