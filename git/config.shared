@@ -1,0 +1,27 @@
+# Shared git defaults (no identity). install.py puts an include for this file at the TOP of
+# ~/.gitconfig, so a value set in ~/.gitconfig itself (name, email, signing, your own choices) wins.
+
+[init]
+	defaultBranch = main
+[push]
+	autoSetupRemote = true   # first `git push` on a new branch sets its upstream
+[fetch]
+	prune = true             # drop remote branches that were deleted on the server
+[pull]
+	rebase = true
+[rebase]
+	autoStash = true
+[merge]
+	conflictStyle = zdiff3   # conflict blocks also show the common base
+[diff]
+	colorMoved = default
+	algorithm = histogram
+[rerere]
+	enabled = true           # remember how a conflict was solved, reuse it next time
+[branch]
+	sort = -committerdate
+[alias]
+	st = status -sb
+	lg = log --graph --oneline --decorate -20
+	last = log -1 --stat
+	unstage = restore --staged

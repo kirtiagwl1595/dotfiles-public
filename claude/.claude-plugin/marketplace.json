@@ -1,0 +1,16 @@
+{
+  "name": "dotfiles-public",
+  "owner": {
+    "name": "kirtiagwl1595"
+  },
+  "plugins": [
+    {
+      "name": "safe-lean",
+      "source": "./",
+      "description": "Guards that keep Claude out of secrets on macOS, Linux and Windows, and skills that cut token cost"
+    }
+  ],
+  "metadata": {
+    "description": "A cross-platform Claude Code starter: safety guards and token-saving skills"
+  }
+}

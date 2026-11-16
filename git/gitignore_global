@@ -1,0 +1,18 @@
+.DS_Store
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+# Secrets: never committed in any repo; templates stay trackable
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.envrc
+*.pem
+
+# Claude Code: personal, per project
+CLAUDE.local.md
+**/.claude/settings.local.json
+
+**/.claude/.cc-writes/

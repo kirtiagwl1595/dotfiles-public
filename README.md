@@ -1,6 +1,140 @@
 # dotfiles-public
 
-A Claude Code and git starter setup for macOS, Linux and Windows.
-It adds safety hooks that block reads of secrets, and rules that cut token cost.
+A Claude Code and git starter setup for macOS, Linux and Windows. Reader: one person who sets it up on their own computer.
 
-Status: in progress. Setup steps follow when `install.py` is ready.
+## The problem
+
+Claude Code can read any file your user account can read, and run any command you approve. Without guards, one wrong approval can show Claude an SSH key, a cloud token or a `.env` file. On native Windows there is no sandbox, so the guards and the approval prompts are the only protection.
+
+This repo adds:
+
+- **Guards** (a Claude Code plugin, `safe-lean`): hooks that block secret reads, `pip install`, commits on `main` and risky command chains, for the Bash and PowerShell tools and the file tools.
+- **Safe settings**: Claude asks before every command outside the sandbox. Auto mode and bypass mode are off.
+- **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
+- **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
+
+The install adds to your setup. It never removes your own values, and it asks before it replaces a weaker safety value.
+
+## Summary
+
+1. Install the prerequisites.
+2. `cd ~`, then `git clone https://github.com/kirtiagwl1595/dotfiles-public.git git/dotfiles-public`
+3. `cd git/dotfiles-public`, then `python3 install.py --check` (Windows: `py install.py --check`). Read the report.
+4. `python3 install.py` (Windows: `py install.py`). Answer each question.
+5. Restart Claude Code. Do the checks in "Verify".
+
+## Prerequisites
+
+| Item | macOS | Linux (Ubuntu) | Windows |
+|---|---|---|---|
+| git | `xcode-select --install` | `sudo apt install git` | `winget install --id Git.Git -e` |
+| bash | comes with macOS | comes with Linux | Git Bash, from Git for Windows (same command) |
+| Python 3.9 or later | `brew install python` or python.org | `sudo apt install python3` | `winget install --id Python.Python.3.12 -e` |
+| Sandbox tools | built in | `sudo apt install bubblewrap socat` | none (no sandbox on native Windows) |
+| Claude Code | [setup page](https://docs.claude.com/en/docs/claude-code/setup) | same | same |
+
+> **Windows: Git Bash is required.** Claude Code runs hooks in Git Bash. Without Git Bash it runs them in PowerShell, `bash` is not found, and no guard runs. `install.py` stops when it finds no Git Bash.
+
+## Procedure
+
+1. Clone the repo. These lines work in bash, zsh and PowerShell. (In Windows PowerShell, `git clone ... ~/git/x` makes a folder named `~`, so start with `cd ~`.)
+
+   ```
+   cd ~
+   git clone https://github.com/kirtiagwl1595/dotfiles-public.git git/dotfiles-public
+   cd git/dotfiles-public
+   ```
+
+2. Run the dry run. It changes nothing.
+   - macOS, Linux: `python3 install.py --check`
+   - Windows (PowerShell or Git Bash): `py install.py --check`
+
+   Verify: each tool line shows `ok`. A `missing` line names the command that fixes it. A `weaker` line names a setting of yours that the install will ask about.
+
+3. Run the install. Use the same command without `--check`.
+   - For each `weaker` value, the install asks `Replace it? [y/N]`. Type `y` to take the safe value. Press Enter to keep yours.
+   - Before it changes a file, it saves a copy as `<file>.bak`.
+
+   Verify: the last line is `Done. Restart Claude Code.`
+
+4. Restart Claude Code.
+
+### What the install changes
+
+| File | Change |
+|---|---|
+| `~/.claude/CLAUDE.md` | Two import lines at the top: `claude/CLAUDE.md` (shared rules) and `claude/CLAUDE.style.md` (writing style). Your own text stays below. |
+| `~/.claude/settings.json` | Adds `claude/settings.base.json`; on macOS and Linux also `claude/settings.sandbox.json`. Your values win, except where you answer `y`. |
+| `~/.gitconfig` | An `[include]` of `git/config.shared` at the top, so your own values win. Sets `core.excludesFile` only when you have none. Never sets your name, email, signing key or credential helper. |
+| Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. |
+
+## How approval works
+
+| Where the command runs | What happens |
+|---|---|
+| macOS, Linux: inside the sandbox | Runs with no question. The sandbox limits files and network. |
+| macOS, Linux: outside the sandbox (Claude retries with `dangerouslyDisableSandbox`, or a `gh` command) | Claude asks you. No allow rule skips the question. |
+| Windows (no sandbox) | Claude asks you for every command. |
+| Any OS: a command that matches an ask rule (`git push`, `rm`, `Remove-Item`, `winget install`, ...) | Claude asks you. |
+| Any OS: a command that a guard or a deny rule blocks | Claude cannot run it. |
+
+## What each guard blocks
+
+All guards run on every OS. They match paths in any case, with `\` or `/`, and with `~`, `$HOME`, `%USERPROFILE%`, `$env:USERPROFILE`, `C:\Users\<name>` or `/c/Users/<name>`.
+
+| Guard | Blocks |
+|---|---|
+| `guard_secrets` | A shell call with no command text. Reads and writes of SSH keys (the guard lets a shell read `.pub`, `known_hosts` and `config`; the Read tool still cannot, because the deny rule `Read(~/.ssh/**)` covers the whole folder), `.aws`, `.azure`, `.kube`, `.gnupg`, `.config/gh`, `.git-credentials`, `.netrc`, `.npmrc`, `.pypirc`, `.docker/config.json`, `.env` files (`.env.example` is fine), `~/Documents`, the macOS Keychain, Linux keyrings, the Windows credential folders (`AppData\...\Microsoft\Credentials`, `Protect`, `Vault`, `GitHub CLI`), and the commands `security find-generic-password -w`, `cmdkey`, `vaultcmd`, `Get-StoredCredential`, `secret-tool lookup`. |
+| `guard_compound` | Checks each part of a chain (`a && b`, `$(...)`, `bash -c`, `cmd /c`, `powershell -Command`) against the ask and deny rules. Denies a download piped into a shell (`curl x \| sh`, `irm x \| iex`). Asks for `powershell -EncodedCommand`. Outside the sandbox, denies a chain of steps that are not all allowed. |
+| `guard_pip` | `pip install`, `python -m pip install`, `py -m pip install`. Use `uv add`. |
+| `guard_main_branch` | `git commit`, `push`, `merge`, `rebase` and other history writes on `main`. Opt out per repo: `git config claude.allowMain true`. |
+| `guard_private_terms` | Writing a term from your own list into lessons, Claude memory or a `dotfiles` repo. Your list: `~/.config/claude/private-terms.txt`, one term per line; it never goes in a repo. No file: the guard does nothing. |
+
+Every guard starts through `claude/hooks/py.sh`. When it finds no working Python 3.9+, it blocks the tool call (exit 2). A guard that crashes denies the call.
+
+## Verify
+
+Do these checks in Claude Code after the restart.
+
+| Check | Expected |
+|---|---|
+| Ask Claude: "Read ~/.ssh/id_rsa" | Blocked or denied: the guard says "touches a private file or secret", or the deny rule gives its own message. |
+| Press shift+tab several times | No auto mode and no bypass mode in the cycle. |
+| Windows: ask Claude to list the files here | An approval prompt. |
+| macOS, Linux: ask Claude to run `git status` | It runs with no prompt (in the sandbox). |
+| macOS, Linux: ask Claude to run `gh auth status` | An approval prompt (`gh` runs outside the sandbox). |
+
+## Failure scenarios
+
+| Symptom | Cause | Resolution |
+|---|---|---|
+| `Blocked: the Claude Code guards found no working Python 3.9 or later.` | No Python, or only the Microsoft Store stub. | Install Python (see Prerequisites). Restart Claude Code. |
+| `$'\r': command not found` in a hook error | `py.sh` was checked out with CRLF line ends. | `git config core.autocrlf false`, then `git checkout -- claude/hooks/py.sh`. `.gitattributes` keeps it LF on a fresh clone. |
+| `install.py` says `FAILED Git Bash is needed` | Windows without Git for Windows. | `winget install --id Git.Git -e`, then run the install again. |
+| Claude Code stops: the sandbox is not available (Linux) | `bubblewrap` or `socat` is missing; `sandbox.failIfUnavailable` is on. | `sudo apt install bubblewrap socat`. |
+| `<path> is not valid JSON` from `install.py` | Your `~/.claude/settings.json` has a syntax error. | Fix the file or move it away, then run the install again. |
+| `Blocked: git commit on 'main'` | The main-branch guard. | `git switch -c feature/<name>`, or opt out for this repo: `git config claude.allowMain true`. |
+| `... is outside <folder>; the permissions.blockReadsOutsideWorkingDirectories setting blocks reads outside the working directories` | Claude reads only the folder it started in, and folders you add. | In Claude Code, type `/add-dir <folder>` for this session. |
+
+## Reverse procedure
+
+1. `claude plugin uninstall safe-lean@dotfiles-public`
+2. Put each `.bak` copy back: `~/.claude/CLAUDE.md.bak`, `~/.claude/settings.json.bak`, `~/.gitconfig.bak`. Without a `.bak` copy, the file did not exist before: delete it.
+3. If the install set it: `git config --global --unset core.excludesFile`.
+4. Restart Claude Code.
+
+## Development
+
+- Tests: `uv run --no-project --with pytest pytest -q tests`. They use a fake home folder; they never touch your real `~/.claude` or `~/.gitconfig`.
+- Lint: `uvx ruff@0.17.2 check . && uvx ruff@0.17.2 format --check .`
+- CI runs both, and `install.py --check`, on Windows, Ubuntu and macOS for each push and PR.
+
+## Facts this setup relies on
+
+From the Claude Code docs (checked 2026-11-16):
+
+- Hooks on Windows run in Git Bash; with no Git Bash, in PowerShell. A `PowerShell` tool exists, so the Bash guard also matches `PowerShell`.
+- The sandbox runs on macOS, Linux and WSL2, not on native Windows. Without `bubblewrap` and `socat` it runs unsandboxed, unless `sandbox.failIfUnavailable` is on.
+- `autoAllowBashIfSandboxed` is off by default. A `dangerouslyDisableSandbox` retry and an excluded command get the normal prompt in default mode, unless an allow rule matches.
+- `permissions.disableAutoMode: "disable"` turns auto mode off; `permissions.disableBypassPermissionsMode: "disable"` turns bypass mode off.
+- Not documented: whether a deny rule like `Read(~/.ssh/**)` matches a Windows path with `\`. The guards cover it either way; the Windows CI job tests the guards.
