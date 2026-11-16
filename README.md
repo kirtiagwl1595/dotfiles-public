@@ -13,7 +13,7 @@ This repo adds:
 - **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
 - **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
 
-The install adds to your setup. It never removes your own values, and it asks before it replaces a weaker safety value.
+The install adds to your setup. It never removes your own values. It asks before it replaces a weaker safety value, before it changes PATH, and before it installs a tool.
 
 ## Summary
 
@@ -68,6 +68,8 @@ The install adds to your setup. It never removes your own values, and it asks be
 | `~/.claude/settings.json` | Adds `claude/settings.base.json`; on macOS and Linux also `claude/settings.sandbox.json`. Your values win, except where you answer `y`. Removes `permissions.disableAutoMode` from an older install only when you answer `y`. |
 | `~/.gitconfig` | An `[include]` of `git/config.shared` at the top, so your own values win. Sets `core.excludesFile` only when you have none. Never sets your name, email, signing key or credential helper. |
 | Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. |
+| PATH (only on `y`) | A tool that is installed but not on PATH (for example `~/.local/bin/claude`): macOS and Linux get a `# >>> dotfiles-public PATH >>>` block in `~/.zshrc`, `~/.bash_profile` (bash on macOS), `~/.bashrc` (bash on Linux) or `~/.profile`. Windows gets the folder in the user PATH (registry, not `setx`). |
+| Tools (only on `y`) | A missing tool is installed with the first that it finds: `winget`, `brew`, `apt-get` (with `sudo`). Claude Code without `winget` or `brew`: the installer from the Claude Code setup page. git on macOS without `brew`: `xcode-select --install`. `--skip-tools` only reports. |
 
 ## How approval works
 
@@ -113,6 +115,7 @@ Do these checks in Claude Code after the restart.
 | `Blocked: the Claude Code guards found no working Python 3.9 or later.` | No Python, or only the Microsoft Store stub. | Install Python (see Prerequisites). Restart Claude Code. |
 | `$'\r': command not found` in a hook error | `py.sh` was checked out with CRLF line ends. | `git config core.autocrlf false`, then `git checkout -- claude/hooks/py.sh`. `.gitattributes` keeps it LF on a fresh clone. |
 | `install.sh needs Python 3.9 or later, and found none.` (or `install.ps1 ...`) | No Python 3.9+, or only the Microsoft Store stub. | Answer `y` to install one, or install Python yourself (see Prerequisites). Then open a new terminal and run the script again. |
+| `claude: command not found` after the install added it to PATH | The open terminal read PATH before the change. | Open a new terminal. |
 | `install.py` says `FAILED Git Bash is needed` | Windows without Git for Windows. | `winget install --id Git.Git -e`, then run the install again. |
 | Claude Code stops: the sandbox is not available (Linux) | `bubblewrap` or `socat` is missing; `sandbox.failIfUnavailable` is on. | `sudo apt install bubblewrap socat`. |
 | `<path> is not valid JSON` from `install.py` | Your `~/.claude/settings.json` has a syntax error. | Fix the file or move it away, then run the install again. |
@@ -124,7 +127,9 @@ Do these checks in Claude Code after the restart.
 1. `claude plugin uninstall safe-lean@dotfiles-public`
 2. Put each `.bak` copy back: `~/.claude/CLAUDE.md.bak`, `~/.claude/settings.json.bak`, `~/.gitconfig.bak`. Without a `.bak` copy, the file did not exist before: delete it.
 3. If the install set it: `git config --global --unset core.excludesFile`.
-4. Restart Claude Code.
+4. PATH: delete the `dotfiles-public PATH` block from your shell file (the `.bak` copy has the old file). Windows: Settings > System > About > Advanced system settings > Environment Variables, then remove the folder from the user `Path`.
+5. A tool that the install installed: remove it with the same package manager (`brew uninstall`, `winget uninstall`, `sudo apt-get remove`).
+6. Restart Claude Code.
 
 ## Development
 

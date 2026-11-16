@@ -31,7 +31,8 @@ def install(home, *args, answers="", path_prefix=None):
 
 
 def full(home, answers=""):
-    return install(home, "--skip-plugin", answers=answers)
+    # --skip-tools: an answer meant for a settings question must never start a real install
+    return install(home, "--skip-plugin", "--skip-tools", answers=answers)
 
 
 def settings(home):
@@ -220,7 +221,7 @@ def test_plugin_is_added_from_the_clone(tmp_path):
     stub.chmod(0o755)
     home = tmp_path / "home"
     home.mkdir()
-    code, out = install(home, path_prefix=bin_dir)
+    code, out = install(home, "--skip-tools", path_prefix=bin_dir)
     assert code == 0, out
     calls = log.read_text().splitlines()
     assert f"plugin marketplace add {(ROOT / 'claude').as_posix()}" in calls
