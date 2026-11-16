@@ -19,8 +19,8 @@ The install adds to your setup. It never removes your own values, and it asks be
 
 1. Install the prerequisites.
 2. `cd ~`, then `git clone https://github.com/kirtiagwl1595/dotfiles-public.git git/dotfiles-public`
-3. `cd git/dotfiles-public`, then `python3 install.py --check` (Windows: `py install.py --check`). Read the report.
-4. `python3 install.py` (Windows: `py install.py`). Answer each question.
+3. `cd git/dotfiles-public`, then `./install.sh --check` (Windows: `.\install.cmd --check`). Read the report.
+4. `./install.sh` (Windows: `.\install.cmd`). Answer each question.
 5. Restart Claude Code. Do the checks in "Verify".
 
 ## Prerequisites
@@ -46,12 +46,13 @@ The install adds to your setup. It never removes your own values, and it asks be
    ```
 
 2. Run the dry run. It changes nothing.
-   - macOS, Linux: `python3 install.py --check`
-   - Windows (PowerShell or Git Bash): `py install.py --check`
+   - macOS, Linux, Git Bash: `./install.sh --check`
+   - Windows PowerShell or Command Prompt: `.\install.cmd --check`. It starts `install.ps1` even when PowerShell blocks scripts.
+   - All three find a Python 3.9+ and start `install.py`. With no Python, they ask, then install one (`winget`, `brew` or `apt-get`). You can also run `python3 install.py --check` (Windows: `py install.py --check`).
 
    Verify: each tool line shows `ok`. A `missing` line names the command that fixes it. A `weaker` line names a setting of yours that the install will ask about.
 
-3. Run the install. Use the same command without `--check`.
+3. Run the install. Use the same command without `--check`: `./install.sh` or `.\install.cmd`.
    - For each `weaker` value, the install asks `Replace it? [y/N]`. Type `y` to take the safe value. Press Enter to keep yours.
    - Before it changes a file, it saves a copy as `<file>.bak`.
 
@@ -111,6 +112,7 @@ Do these checks in Claude Code after the restart.
 |---|---|---|
 | `Blocked: the Claude Code guards found no working Python 3.9 or later.` | No Python, or only the Microsoft Store stub. | Install Python (see Prerequisites). Restart Claude Code. |
 | `$'\r': command not found` in a hook error | `py.sh` was checked out with CRLF line ends. | `git config core.autocrlf false`, then `git checkout -- claude/hooks/py.sh`. `.gitattributes` keeps it LF on a fresh clone. |
+| `install.sh needs Python 3.9 or later, and found none.` (or `install.ps1 ...`) | No Python 3.9+, or only the Microsoft Store stub. | Answer `y` to install one, or install Python yourself (see Prerequisites). Then open a new terminal and run the script again. |
 | `install.py` says `FAILED Git Bash is needed` | Windows without Git for Windows. | `winget install --id Git.Git -e`, then run the install again. |
 | Claude Code stops: the sandbox is not available (Linux) | `bubblewrap` or `socat` is missing; `sandbox.failIfUnavailable` is on. | `sudo apt install bubblewrap socat`. |
 | `<path> is not valid JSON` from `install.py` | Your `~/.claude/settings.json` has a syntax error. | Fix the file or move it away, then run the install again. |
