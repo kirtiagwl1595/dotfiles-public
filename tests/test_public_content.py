@@ -76,7 +76,8 @@ def test_no_email_address():
         (p.name, m)
         for p, t in texts()
         for m in EMAIL.findall(t)
-        if not m.endswith(("@t", "@y", "@example.com"))
+        # git@host is an SSH remote (forge.sh tests), not a mail address
+        if not m.endswith(("@t", "@y", "@example.com")) and not m.startswith("git@")
     ]
     assert not hits
 

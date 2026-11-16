@@ -133,3 +133,31 @@ def test_launcher_has_unix_line_ends():
     # A CRLF checkout breaks bash: `$'\r': command not found`, which is not exit 2
     assert b"\r\n" not in PY_SH.read_bytes()
     assert "*.sh text eol=lf" in (ROOT / ".gitattributes").read_text()
+
+
+def test_launcher_passes_the_arguments_after_the_script(tmp_path):
+    # The setup-repo skill runs `py.sh ../repo_setup.py apply <repo>`: apply must arrive
+    # A copy of the plugin layout in tmp_path: a path from the repo to tmp_path can cross
+    # drives on Windows (D: to C:), and relpath fails there
+    (tmp_path / "hooks").mkdir()
+    shutil.copyfile(PY_SH, tmp_path / "hooks" / "py.sh")
+    (tmp_path / "show_args.py").write_text(
+        "import sys; print(sys.argv[1:])\n", encoding="utf-8"
+    )
+    env = env_for()
+    env["PATH"] = str(real_python(tmp_path))
+    p = subprocess.run(
+        [
+            bash_exe(),
+            str(tmp_path / "hooks" / "py.sh"),
+            "../show_args.py",
+            "apply",
+            "a b",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        check=False,
+    )
+    assert p.stdout.strip() == "['apply', 'a b']", p.stderr

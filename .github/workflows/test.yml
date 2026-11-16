@@ -33,3 +33,5 @@ jobs:
       - run: uv run --no-project --with pytest pytest -q tests
       - name: install.py --check prints a report and changes nothing
         run: uv run --no-project python install.py --check
+      - name: install.sh --check finds a Python and starts install.py
+        run: bash install.sh --check

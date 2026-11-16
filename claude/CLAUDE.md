@@ -18,7 +18,7 @@ Order:
 ## Secrets and the sandbox
 - The guards block reads of SSH keys, cloud and git credentials, keychains and `.env` files. Ask the user for only the part you need, for example the variable names.
 - In the sandbox, "Operation not permitted" or "token missing from keyring" is a sandbox denial, not a logout. Run the command alone outside the sandbox (it asks the user). Keep `gh auth login` and token files out of it.
-- Native Windows has no sandbox: every command asks the user. macOS and Linux: a sandboxed command runs without a question; an escape from the sandbox asks.
+- Native Windows has no sandbox: in default mode, every command asks the user. macOS and Linux: a sandboxed command runs without a question; an escape from the sandbox asks. In auto mode (the user picks it with shift+tab), a classifier decides instead of the user; deny rules and guards still apply.
 
 ## Git
 - Work on a branch (`git switch -c feature/...`) and merge by PR. The main-branch guard blocks commits and pushes on `main`; a repo can opt out with `git config claude.allowMain true`.

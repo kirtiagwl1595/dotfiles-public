@@ -1,0 +1,3 @@
+{"input": "hello world", "expected": "HELLO WORLD"}
+{"input": "  data science ", "expected": "DATA SCIENCE"}
+{"input": "Churn is high in Q3", "expected": "CHURN", "match": "contains"}

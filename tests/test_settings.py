@@ -1,5 +1,7 @@
 """The settings files keep the approval rule: inside the sandbox, a command runs as allowed;
-outside it (an escape, an excluded command, every command on Windows), Claude asks the user."""
+outside it (an escape, an excluded command, every command on Windows), Claude asks the user.
+Auto mode is allowed but never the default: when the user picks it, a classifier decides
+instead of the user, and the deny rules and the guards still apply."""
 
 import fnmatch
 import json
@@ -23,11 +25,11 @@ def bash_rule(rule):
     return rule[5:-1].removesuffix(":*").rstrip("*").strip()
 
 
-def test_default_mode_asks_and_auto_and_bypass_are_off():
+def test_default_mode_asks_bypass_is_off_and_auto_is_allowed():
     perms = BASE["permissions"]
     assert perms["defaultMode"] == "default"
     assert perms["disableBypassPermissionsMode"] == "disable"
-    assert perms["disableAutoMode"] == "disable"
+    assert "disableAutoMode" not in perms
 
 
 def test_base_allows_no_command_so_windows_always_asks():
@@ -118,3 +120,82 @@ def test_every_rule_is_well_formed():
 def test_network_allowlist_has_no_wildcard_for_everything():
     domains = SANDBOX["sandbox"]["network"]["allowedDomains"]
     assert domains and "*" not in domains
+
+
+@pytest.mark.parametrize(
+    "rule",
+    [
+        "Bash(glab mr create:*)",
+        "Bash(glab mr merge:*)",
+        "Bash(glab mr close:*)",
+        "Bash(glab mr note:*)",
+        "Bash(glab issue create:*)",
+        "Bash(glab issue note:*)",
+        "Bash(glab release create:*)",
+        "Bash(glab repo create:*)",
+        "Bash(glab repo delete:*)",
+        "Bash(glab api *-X *)",
+        "Bash(glab api *--method*)",
+        "Bash(glab api * -f *)",
+        "Bash(glab api * -F *)",
+        "Bash(glab api *--field*)",
+        "Bash(glab api *--raw-field*)",
+        "Bash(glab api *--input*)",
+        "Bash(*hf upload*)",
+        "Bash(*hf repos*)",
+        "Bash(*hf auth*)",
+        "Artifact",
+        "mcp__claude_ai_Gmail__*",
+        "mcp__claude_ai_Google_Drive__*",
+        "mcp__claude_ai_Google_Calendar__*",
+    ],
+)
+def test_outward_gitlab_hf_and_connector_actions_ask(rule):
+    assert rule in rules(BASE, "ask")
+
+
+@pytest.mark.parametrize("cmd", ["*hf auth login*", "*hf.co/cli/install.sh*"])
+def test_hf_login_and_its_install_script_are_denied(cmd):
+    assert f"Bash({cmd})" in rules(BASE, "deny")
+
+
+def test_glab_runs_outside_the_sandbox_like_gh():
+    # glab reads its token from the keychain, which the sandbox hides
+    assert "glab *" in SANDBOX["sandbox"]["excludedCommands"]
+
+
+@pytest.mark.parametrize(
+    "path", ["~/.cache/huggingface/token", "~/.cache/huggingface/stored_tokens"]
+)
+def test_hf_token_files_are_hidden_from_sandboxed_commands(path):
+    files = SANDBOX["sandbox"]["credentials"]["files"]
+    assert {"path": path, "mode": "deny"} in files
+
+
+@pytest.mark.parametrize("name", ["HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"])
+def test_hf_token_env_vars_are_hidden(name):
+    env = SANDBOX["sandbox"]["credentials"]["envVars"]
+    assert {"name": name, "mode": "deny"} in env
+
+
+@pytest.mark.parametrize("cmd", ["*forge.sh pr-create*"])
+def test_opening_a_pr_through_forge_asks(cmd):
+    assert f"Bash({cmd})" in rules(BASE, "ask")
+
+
+def test_plugin_update_asks():
+    assert "Bash(claude plugin update:*)" in rules(BASE, "ask")
+
+
+def excluded(command):
+    return any(
+        fnmatch.fnmatchcase(command, p) for p in SANDBOX["sandbox"]["excludedCommands"]
+    )
+
+
+def test_only_the_plugin_copy_of_forge_runs_outside_the_sandbox():
+    cache = "/Users/me/.claude/plugins/cache/dotfiles-public/safe-lean/0.2.0"
+    assert excluded(f'bash "{cache}/forge.sh" pr-create --title T --body-file b')
+    # A forge.sh from a cloned repo stays in the sandbox
+    assert not excluded("bash ./x/forge.sh kind")
+    assert not excluded("bash /tmp/evil/forge.sh pr-create")
