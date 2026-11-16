@@ -9,7 +9,7 @@
   --skip-plugin  do not run `claude plugin ...` (for tests, or before Claude Code is installed)
 
 It adds and never removes your own values. Before it replaces a value that is weaker than the
-safe one (for example an auto approval mode), it asks you. It never installs a tool, and it
+safe one (for example bypass mode, or auto mode as the start mode), it asks you. It never installs a tool, and it
 never sets your git name, email, signing key or credential helper. Before it changes a file,
 it saves a copy as <file>.bak. To undo, put the .bak files back.
 """
@@ -200,14 +200,16 @@ def weaker_values(live, safe):
                 replace("permissions", "defaultMode", safe_perms["defaultMode"]),
             )
         )
-    for key in ("disableBypassPermissionsMode", "disableAutoMode"):
-        if perms.get(key) != "disable":
-            found.append(
+    if perms.get("disableBypassPermissionsMode") != "disable":
+        found.append(
+            (
                 (
-                    f"permissions.{key} is {perms.get(key)!r}, safe: 'disable'",
-                    replace("permissions", key, "disable"),
-                )
+                    f"permissions.disableBypassPermissionsMode is "
+                    f"{perms.get('disableBypassPermissionsMode')!r}, safe: 'disable'"
+                ),
+                replace("permissions", "disableBypassPermissionsMode", "disable"),
             )
+        )
     box = live.get("sandbox", {})
     if "sandbox" in safe:
         for key, value in (
@@ -236,8 +238,31 @@ def weaker_values(live, safe):
     return found
 
 
-def ask(question):
-    print(f"  {question} Replace it? [y/N] ", end="", flush=True)
+# Values that an older version of this setup wrote and no longer wants: (path, value, question)
+RETIRED = [
+    (
+        ("permissions", "disableAutoMode"),
+        "disable",
+        (
+            "permissions.disableAutoMode is 'disable' (from an older install): auto mode is "
+            "off. This setup now allows it with shift+tab; sessions still start in default mode."
+        ),
+        "Allow auto mode again?",
+    ),
+]
+
+
+def retired_values(live):
+    """(label, prompt, fix) for each value an older install wrote. fix(live) removes it."""
+    found = []
+    for (section, key), value, label, prompt in RETIRED:
+        if live.get(section, {}).get(key) == value:
+            found.append((label, prompt, lambda s, a=section, k=key: s[a].pop(k)))
+    return found
+
+
+def ask(question, prompt="Replace it?"):
+    print(f"  {question} {prompt} [y/N] ", end="", flush=True)
     answer = sys.stdin.readline()
     print()
     return answer.strip().lower() in ("y", "yes")
@@ -255,6 +280,13 @@ def setup_settings(report):
         if report.check:
             report.line("weaker", label)
         elif ask(label):
+            fix(merged)
+        else:
+            report.line("kept", label)
+    for label, prompt, fix in retired_values(merged):
+        if report.check:
+            report.line("retired", label)
+        elif ask(label, prompt):
             fix(merged)
         else:
             report.line("kept", label)

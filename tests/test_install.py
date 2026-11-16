@@ -111,7 +111,7 @@ def test_settings_merge_keeps_own_values_and_adds_the_baseline(tmp_path):
     assert s["model"] == "x"
     assert "Read(./docs/**)" in s["permissions"]["allow"]
     assert s["permissions"]["defaultMode"] == "default"
-    assert s["permissions"]["disableAutoMode"] == "disable"
+    assert "disableAutoMode" not in s["permissions"]
     assert "Read(~/.ssh/**)" in s["permissions"]["deny"]
     assert ("sandbox" in s) is SANDBOX_OS
 
@@ -123,6 +123,27 @@ def test_weaker_mode_is_replaced_only_on_yes(tmp_path, answer, expected):
     write_settings(tmp_path, {"permissions": {"defaultMode": "auto"}})
     assert full(tmp_path, answers=answer)[0] == 0
     assert settings(tmp_path)["permissions"]["defaultMode"] == expected
+
+
+def test_check_reports_auto_mode_off_from_an_old_install_and_keeps_it(tmp_path):
+    write_settings(tmp_path, {"permissions": {"disableAutoMode": "disable"}})
+    code, out = install(tmp_path, "--check", "--skip-plugin")
+    assert code == 0, out
+    assert "retired" in out and "disableAutoMode" in out
+    assert settings(tmp_path)["permissions"]["disableAutoMode"] == "disable"
+
+
+@pytest.mark.parametrize(
+    "answer, removed", [("y\n", True), ("n\n", False), ("", False)]
+)
+def test_auto_mode_off_from_an_old_install_is_removed_only_on_yes(
+    tmp_path, answer, removed
+):
+    # The only question in this run: the merged baseline has no weaker value
+    write_settings(tmp_path, {"permissions": {"disableAutoMode": "disable"}})
+    assert full(tmp_path, answers=answer)[0] == 0
+    perms = settings(tmp_path)["permissions"]
+    assert ("disableAutoMode" not in perms) is removed
 
 
 def test_allow_entry_that_skips_a_question_is_removed_on_yes(tmp_path):

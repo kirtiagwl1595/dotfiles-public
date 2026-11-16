@@ -1,5 +1,7 @@
 """The settings files keep the approval rule: inside the sandbox, a command runs as allowed;
-outside it (an escape, an excluded command, every command on Windows), Claude asks the user."""
+outside it (an escape, an excluded command, every command on Windows), Claude asks the user.
+Auto mode is allowed but never the default: when the user picks it, a classifier decides
+instead of the user, and the deny rules and the guards still apply."""
 
 import fnmatch
 import json
@@ -23,11 +25,11 @@ def bash_rule(rule):
     return rule[5:-1].removesuffix(":*").rstrip("*").strip()
 
 
-def test_default_mode_asks_and_auto_and_bypass_are_off():
+def test_default_mode_asks_bypass_is_off_and_auto_is_allowed():
     perms = BASE["permissions"]
     assert perms["defaultMode"] == "default"
     assert perms["disableBypassPermissionsMode"] == "disable"
-    assert perms["disableAutoMode"] == "disable"
+    assert "disableAutoMode" not in perms
 
 
 def test_base_allows_no_command_so_windows_always_asks():

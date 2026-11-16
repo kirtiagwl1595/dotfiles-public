@@ -4,12 +4,12 @@ A Claude Code and git starter setup for macOS, Linux and Windows. Reader: one pe
 
 ## The problem
 
-Claude Code can read any file your user account can read, and run any command you approve. Without guards, one wrong approval can show Claude an SSH key, a cloud token or a `.env` file. On native Windows there is no sandbox, so the guards and the approval prompts are the only protection.
+Claude Code can read any file your user account can read, and run any command you approve. Without guards, one wrong approval can show Claude an SSH key, a cloud token or a `.env` file. On native Windows there is no sandbox, so the guards and the approval prompts are the only protection. In auto mode on Windows, only the guards and the auto mode classifier remain.
 
 This repo adds:
 
 - **Guards** (a Claude Code plugin, `safe-lean`): hooks that block secret reads, `pip install`, commits on `main` and risky command chains, for the Bash and PowerShell tools and the file tools.
-- **Safe settings**: Claude asks before every command outside the sandbox. Auto mode and bypass mode are off.
+- **Safe settings**: in default mode, Claude asks before every command outside the sandbox. Bypass mode is off. Auto mode is available with shift+tab; each session starts in default mode.
 - **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
 - **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
 
@@ -64,7 +64,7 @@ The install adds to your setup. It never removes your own values, and it asks be
 | File | Change |
 |---|---|
 | `~/.claude/CLAUDE.md` | Two import lines at the top: `claude/CLAUDE.md` (shared rules) and `claude/CLAUDE.style.md` (writing style). Your own text stays below. |
-| `~/.claude/settings.json` | Adds `claude/settings.base.json`; on macOS and Linux also `claude/settings.sandbox.json`. Your values win, except where you answer `y`. |
+| `~/.claude/settings.json` | Adds `claude/settings.base.json`; on macOS and Linux also `claude/settings.sandbox.json`. Your values win, except where you answer `y`. Removes `permissions.disableAutoMode` from an older install only when you answer `y`. |
 | `~/.gitconfig` | An `[include]` of `git/config.shared` at the top, so your own values win. Sets `core.excludesFile` only when you have none. Never sets your name, email, signing key or credential helper. |
 | Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. |
 
@@ -77,6 +77,7 @@ The install adds to your setup. It never removes your own values, and it asks be
 | Windows (no sandbox) | Claude asks you for every command. |
 | Any OS: a command that matches an ask rule (`git push`, `rm`, `Remove-Item`, `winget install`, ...) | Claude asks you. |
 | Any OS: a command that a guard or a deny rule blocks | Claude cannot run it. |
+| Any OS, auto mode (you select it with shift+tab) | A classifier approves or blocks each action instead of you. Deny rules and guards still apply. On Windows, nothing else is between Claude and the shell. |
 
 ## What each guard blocks
 
@@ -99,7 +100,7 @@ Do these checks in Claude Code after the restart.
 | Check | Expected |
 |---|---|
 | Ask Claude: "Read ~/.ssh/id_rsa" | Blocked or denied: the guard says "touches a private file or secret", or the deny rule gives its own message. |
-| Press shift+tab several times | No auto mode and no bypass mode in the cycle. |
+| Press shift+tab several times | Auto mode is in the cycle. Bypass mode is not. A new session starts in default mode. |
 | Windows: ask Claude to list the files here | An approval prompt. |
 | macOS, Linux: ask Claude to run `git status` | It runs with no prompt (in the sandbox). |
 | macOS, Linux: ask Claude to run `gh auth status` | An approval prompt (`gh` runs outside the sandbox). |
@@ -136,5 +137,5 @@ From the Claude Code docs (checked 2026-11-16):
 - Hooks on Windows run in Git Bash; with no Git Bash, in PowerShell. A `PowerShell` tool exists, so the Bash guard also matches `PowerShell`.
 - The sandbox runs on macOS, Linux and WSL2, not on native Windows. Without `bubblewrap` and `socat` it runs unsandboxed, unless `sandbox.failIfUnavailable` is on.
 - `autoAllowBashIfSandboxed` is off by default. A `dangerouslyDisableSandbox` retry and an excluded command get the normal prompt in default mode, unless an allow rule matches.
-- `permissions.disableAutoMode: "disable"` turns auto mode off; `permissions.disableBypassPermissionsMode: "disable"` turns bypass mode off.
+- `permissions.disableBypassPermissionsMode: "disable"` turns bypass mode off. Without `permissions.disableAutoMode`, auto mode is in the shift+tab cycle; `defaultMode: "default"` keeps it from being the start mode.
 - Not documented: whether a deny rule like `Read(~/.ssh/**)` matches a Windows path with `\`. The guards cover it either way; the Windows CI job tests the guards.

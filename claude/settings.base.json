@@ -137,7 +137,6 @@
     ],
     "defaultMode": "default",
     "disableBypassPermissionsMode": "disable",
-    "disableAutoMode": "disable",
     "blockReadsOutsideWorkingDirectories": true
   },
   "env": {
