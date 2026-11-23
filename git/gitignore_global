@@ -5,14 +5,24 @@ __pycache__/
 # Secrets: never committed in any repo; templates stay trackable
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
 !.env.sample
 !.env.template
+!*.env.example
+!*.env.sample
+!*.env.template
 .envrc
 *.pem
 
 # Claude Code: personal, per project
 CLAUDE.local.md
 **/.claude/settings.local.json
+.claude/lessons/
+.claude/audits/
+.claude/loop-runs/
+# A loop's working folder in its worktree
+.loop/
 
 **/.claude/.cc-writes/

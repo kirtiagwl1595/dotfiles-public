@@ -9,9 +9,24 @@ import re
 import subprocess
 
 from _common import run_guard
-from guard_compound import parts_of, program
+from guard_compound import git_options, normalize, parts_of, program
 
 WRITES = ("commit", "push", "merge", "rebase", "cherry-pick", "am", "revert")
+# These change the files of a checkout: guard_live_checkout and guard_loop share them
+TREE_WRITES = (
+    *("merge", "rebase", "cherry-pick", "am", "revert", "pull", "apply"),
+    *("reset", "checkout", "switch", "stash", "clean", "restore"),
+)
+# A read-only form of those verbs is no write, but only as the whole command, in literal words.
+# Matched on the text, not on the parsed parts: the parser loses what the shell keeps (words after
+# a redirect or a #, a quoted ";", a continued line), and one lost `--apply` turns a read into a write.
+WORD = r"[\w.@/][\w.@/:,+-]*"
+READ_ONLY = re.compile(
+    rf"git( -C (~/)?{WORD})?"
+    rf"( stash (list|show)( (-p|--stat|--oneline|stash@\{{\d+\}}|{WORD}))*"
+    rf"| clean (-[dxX]*n[dxX]*|--dry-run)( {WORD})*"
+    rf"| apply (--check|--stat|--numstat|--summary)( {WORD})*)"
+)
 
 
 def git(repo, *args):
@@ -30,20 +45,31 @@ def native(path):
     return f"{m[1]}:{path[2:] or '/'}" if m else path
 
 
-def git_writes(cmd, cwd):
-    """(repo, verb, args) for each git write, following cd and git -C."""
+def shell_path(word):
+    """A folder word as the shell expands it: variables of this environment, then ~."""
+    return native(os.path.expandvars(word))
+
+
+def git_writes(cmd, cwd, verbs=WRITES):
+    """(repo, verb, args) for each git subcommand in `verbs`, following cd and git -C.
+
+    guard_loop passes more verbs (reset, switch...); here they would block `git switch -c`
+    on main, which is the documented way to start a branch."""
+    if READ_ONLY.fullmatch(cmd):
+        return []
     repo, found = cwd, []
     for raw, norm in parts_of(cmd):
         if norm[0] == "cd" and len(norm) > 1:
-            repo = os.path.join(repo, native(norm[1]))
-        elif norm[:1] == ["git"] and len(norm) > 1 and norm[1] in WRITES:
-            target = repo
-            start = next(i for i, w in enumerate(raw) if program(w) == "git")
-            for i, w in enumerate(raw[start + 1 :], start + 1):
-                if not w.startswith("-"):
-                    break
-                if w == "-C" and i + 1 < len(raw):
-                    target = os.path.join(target, native(raw[i + 1]))
+            repo = os.path.join(repo, shell_path(norm[1]))
+        elif norm[:1] == ["git"] and len(norm) > 1 and norm[1] in verbs:
+            # The git word whose tail normalizes to this part, not the value of `sudo -u git`
+            start = next(
+                i
+                for i, w in enumerate(raw)
+                if program(w) == "git" and normalize(raw[i:]) == norm
+            )
+            folders = git_options(raw[start:])[1]
+            target = os.path.join(repo, *map(shell_path, folders))
             found.append((target, norm[1], norm[2:]))
     return found
 

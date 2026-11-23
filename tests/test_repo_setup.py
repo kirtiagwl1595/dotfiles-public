@@ -9,16 +9,10 @@ import subprocess
 import sys
 
 import pytest
-from hookrun import ROOT, env_for
+from hookrun import IDENTITY, ROOT, env_for
 
 SCRIPT = ROOT / "claude" / "repo_setup.py"
 BRANCH = "chore/claude-forward"
-IDENTITY = {
-    "GIT_AUTHOR_NAME": "t",
-    "GIT_AUTHOR_EMAIL": "t@t",
-    "GIT_COMMITTER_NAME": "t",
-    "GIT_COMMITTER_EMAIL": "t@t",
-}
 
 
 def git(repo, *args):
@@ -115,7 +109,7 @@ def test_bash_allow_rules_only_where_a_sandbox_exists(repos):
     run("apply", repos)
     settings = committed(repos / "group/web", ".claude/settings.json")
     if os.name == "nt":
-        assert settings is None
+        assert json.loads(settings)["permissions"]["allow"] == []
     else:
         assert "Bash(npm test:*)" in json.loads(settings)["permissions"]["allow"]
 
@@ -195,7 +189,7 @@ def test_team_repos_are_skipped_in_a_folder_scan(repos, url, team):
     git(r, "remote", "add", "origin", url)
     _, out = run("plan", repos, FORGE_GIT_USER="me")
     assert ("remote-case: team repo" in out) == team
-    assert ("→ remote-case" in out) == (not team)
+    assert ("→ remote-case [" in out) == (not team)
 
 
 @pytest.mark.parametrize(

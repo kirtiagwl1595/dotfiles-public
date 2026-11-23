@@ -24,6 +24,8 @@ import json
 import os
 import re
 import shlex
+import shutil
+from collections import namedtuple
 from pathlib import Path
 
 from _common import run_guard
@@ -43,30 +45,53 @@ PATH_BACKSLASH = re.compile(r"\\(?=[\w.~-])")
 WRAPPERS = {"sudo", "command", "env", "nohup", "time"}
 XARGS_VALUE_OPTS = {"-I", "-J", "-L", "-P", "-R", "-S", "-E", "-n", "-s"}
 FIND_EXEC = {"-exec", "-execdir", "-ok", "-okdir"}
+# git global options whose value is the next word (the `--opt=value` form is one word)
+GIT_VALUE_OPTS = {
+    "-C",
+    "-c",
+    "--git-dir",
+    "--work-tree",
+    "--namespace",
+    "--config-env",
+    "--attr-source",
+    "--super-prefix",
+}
 HEREDOC = re.compile(
     r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n(.*?)(?:\n[ \t]*\2[ \t]*(?=\n|$)|\Z)", re.DOTALL
 )
 REDIRECT = re.compile(r"[<>]+&?")
 SUBST = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
-# Stdin filter: option flags it may take, those that take a value, words before any file
-FILTERS = {
-    "head": ("cnq", "cn", 0),
-    "tail": ("cnqr", "cn", 0),
-    "cat": ("n", "", 0),
-    "wc": ("clmw", "", 0),
-    "grep": ("EFcinovw", "ABC", 1),
-    "sort": ("fnru", "kt", 0),
-    "uniq": ("cdiu", "", 0),
-    "jq": ("cerS", "", 1),
-    "tr": ("cds", "", 2),
-    "cut": ("s", "cdf", 0),
-    "column": ("t", "s", 0),
-    "sed": ("n", "", 1),
-    "awk": ("", "F", 1),
-}
 SED_PRINT = re.compile(r"(\d+|\$)(,(\d+|\$))?p")
 AWK_UNSAFE = re.compile(r"system|getline|ARGV|ARGC|[|>]")
 JQ_UNSAFE = re.compile(r"import|include")
+
+
+def _any(_words, _operands):
+    return True
+
+
+# Stdin filter: option flags it may take, those that take a value, the allowed counts
+# of words before any file, and a check on the words (a script must not run code)
+FILTERS = {
+    "head": ("cnq", "cn", {0}, _any),
+    "tail": ("cnqr", "cn", {0}, _any),
+    "cat": ("n", "", {0}, _any),
+    "wc": ("clmw", "", {0}, _any),
+    "grep": ("EFcinovw", "ABC", {1}, _any),
+    "sort": ("fnru", "kt", {0}, _any),
+    "uniq": ("cdiu", "", {0}, _any),
+    "jq": ("cerS", "", {1}, lambda _w, ops: not JQ_UNSAFE.search(ops[0])),
+    "tr": ("cds", "", {1, 2}, _any),
+    "cut": ("s", "cdf", {0}, _any),
+    "column": ("t", "s", {0}, _any),
+    "sed": (
+        "n",
+        "",
+        {1},
+        lambda w, ops: "-n" in w and bool(SED_PRINT.fullmatch(ops[0])),
+    ),
+    "awk": ("", "F", {1}, lambda _w, ops: not AWK_UNSAFE.search(ops[0])),
+}
 # Coarse words, on raw text. Edges keep `curl.sh` and `x/python/y` from matching
 FETCH_WORD = re.compile(
     r"(?<![\w.-])(curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)(?![\w./-])",
@@ -82,47 +107,44 @@ QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
 PROCESS_SUBST = re.compile(r"[<=]\(")
 
 
+def lexer(cmd):
+    """Shell words and separators; a newline is a separator, not white space."""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|<>()\n")
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    return lex
+
+
 def filters_stdin(words):
     """True for a pipe stage that reads only stdin and writes only stdout. An allowlist:
     an option or a word it does not know makes the stage a real step."""
     if not words or words[0] not in FILTERS:
         return False
-    flags, valued, free = FILTERS[words[0]]
+    flags, valued, counts, safe = FILTERS[words[0]]
     operands, i = [], 1
     while i < len(words):
         w = words[i]
         i += 1
-        if len(w) < 2 or not w.startswith("-") or w[1:].isdigit():
-            if not w.startswith("-") or len(w) < 2:
-                operands.append(w)
-            continue
-        if w.startswith("--"):
+        if w == "-" or not w.startswith("-"):
+            operands.append(w)
+        elif w.startswith("--") or not (
+            w[1:].isdigit() or w[1] in valued or set(w[1:]) <= set(flags)
+        ):
             return False
-        if w[1] in valued:
-            i += len(w) == 2
-        elif not set(w[1:]) <= set(flags):
-            return False
-    if len(operands) != free and not (words[0] == "tr" and len(operands) == 1):
-        return False
-    if words[0] == "sed":
-        return "-n" in words and bool(SED_PRINT.fullmatch(operands[0]))
-    if words[0] == "jq":
-        return not JQ_UNSAFE.search(operands[0])
-    return not (words[0] == "awk" and AWK_UNSAFE.search(operands[0]))
+        elif w[1] in valued:
+            i += len(w) == 2  # the value is the next word
+    return len(operands) in counts and safe(words, operands)
 
 
 def pipe_filters(cmd):
     """The top-level stages after a plain `|` that only filter stdin."""
-    lex = shlex.shlex(HEREDOC.sub("\n", cmd), posix=True, punctuation_chars=";&|<>()\n")
-    lex.whitespace = " \t\r"
-    lex.whitespace_split = True
     found, cur, sep, redirected = [], [], None, False
 
     def close():
         if sep == "|" and not redirected and filters_stdin(cur):
             found.append(list(cur))
 
-    for tok in lex:
+    for tok in lexer(HEREDOC.sub("\n", cmd)):
         if tok and set(tok) <= SEPARATORS:
             close()
             cur, sep, redirected = [], tok, False
@@ -137,9 +159,6 @@ def pipe_filters(cmd):
 def pipelines(cmd):
     """Each pipeline as its stages, in data-flow order. `bash <(curl x)` counts as
     `curl x | bash`. Parentheses do not end a stage, so `(curl x) | bash` stays one pipeline."""
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|<>()\n")
-    lex.whitespace = " \t\r"
-    lex.whitespace_split = True
     lines, line, cur = [], [], []
 
     def close_stage():
@@ -152,7 +171,7 @@ def pipelines(cmd):
             line.append(words)
         cur = []
 
-    for tok in lex:
+    for tok in lexer(cmd):
         if not tok or not set(tok) <= SEPARATORS:
             cur.append(tok)
             continue
@@ -194,18 +213,23 @@ def may_run_download(cmd, parts):
     return bool(RUNNER_WORD.search(cmd)) and several
 
 
-def load_rules(cwd):
-    """{allow, ask, deny: [rule text]} from the plugin baseline plus user and project settings."""
-    files = [
+def settings_files(cwd):
+    """The plugin baseline and its sandbox rules, then the user and project settings."""
+    return [
         Path(__file__).resolve().parents[1] / "settings.base.json",
+        Path(__file__).resolve().parents[1] / "settings.sandbox.json",
         Path.home() / ".claude" / "settings.json",
         Path(cwd) / ".claude" / "settings.json",
         Path(cwd) / ".claude" / "settings.local.json",
     ]
+
+
+def load_rules(cwd):
+    """{allow, ask, deny: [rule text]} from the settings files."""
     rules = {"allow": [], "ask": [], "deny": []}
-    for f in files:
+    for f in settings_files(cwd):
         try:
-            perms = json.loads(f.read_text()).get("permissions", {})
+            perms = json.loads(f.read_text(encoding="utf-8")).get("permissions", {})
         except (OSError, ValueError, AttributeError):
             continue
         for kind in rules:
@@ -236,11 +260,8 @@ def command_words(words):
 
 def words_of(cmd):
     """Split into parts (lists of words). Raises ValueError on an unclosed quote."""
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|<>()\n")
-    lex.whitespace = " \t\r"
-    lex.whitespace_split = True
     parts, cur = [], []
-    for tok in lex:
+    for tok in lexer(cmd):
         if tok and set(tok) <= SEPARATORS:
             parts.append(cur)
             cur = []
@@ -268,11 +289,18 @@ def normalize(words):
     if w:
         w[0] = program(w[0])
     if w and w[0] == "git":
-        i = 1
-        while i < len(w) and w[i].startswith("-"):
-            i += 2 if w[i] in ("-C", "-c") else 1
-        w = ["git", *w[i:]]
+        w = ["git", *w[git_options(w)[0] :]]
     return w
+
+
+def git_options(words):
+    """For words that start with git: (index of the subcommand, the -C folders in order)."""
+    i, folders = 1, []
+    while i < len(words) and words[i].startswith("-"):
+        if words[i] == "-C" and i + 1 < len(words):
+            folders.append(words[i + 1])
+        i += 2 if words[i] in GIT_VALUE_OPTS else 1
+    return i, folders
 
 
 def reads_stdin(norm):
@@ -284,24 +312,6 @@ def reads_stdin(norm):
     if not norm or norm[0] not in SHELLS or "-c" in norm:
         return False
     return "-s" in norm or all(w.startswith("-") for w in norm[1:])
-
-
-def inner_commands(norm):
-    """The commands that xargs and find run, so the rules see them in the sandbox too."""
-    if norm[0] == "xargs":
-        i = 1
-        while i < len(norm) and norm[i].startswith("-"):
-            i += 2 if norm[i] in XARGS_VALUE_OPTS else 1
-        return [norm[i:]] if norm[i:] else []
-    if norm[0] != "find":
-        return []
-    found = [["rm"]] if "-delete" in norm else []
-    for i, w in enumerate(norm):
-        if w in FIND_EXEC:
-            found.append(
-                list(itertools.takewhile(lambda x: x not in (";", "+"), norm[i + 1 :]))
-            )
-    return [c for c in found if c]
 
 
 def _switch(word):
@@ -331,6 +341,24 @@ def encoded(norm):
 
 def windows_paths(cmd):
     return PATH_BACKSLASH.sub("/", cmd)
+
+
+def inner_commands(norm):
+    """The commands that xargs and find run, so the rules see them in the sandbox too."""
+    if norm[0] == "xargs":
+        i = 1
+        while i < len(norm) and norm[i].startswith("-"):
+            i += 2 if norm[i] in XARGS_VALUE_OPTS else 1
+        return [norm[i:]] if norm[i:] else []
+    if norm[0] != "find":
+        return []
+    found = [["rm"]] if "-delete" in norm else []
+    for i, w in enumerate(norm):
+        if w in FIND_EXEC:
+            found.append(
+                list(itertools.takewhile(lambda x: x not in (";", "+"), norm[i + 1 :]))
+            )
+    return [c for c in found if c]
 
 
 def parts_of(cmd, depth=0, texts=None):
@@ -381,6 +409,30 @@ def hidden(norm):
     )
 
 
+# Kept for guard_loop.py, which imports it; guard_compound itself does not call it.
+def trusted_forge(raw, norm, cwd):
+    """False when a part runs a forge.sh that is not ours: the allow rules match by name.
+    Ours is the forge.sh of this plugin, and the one of the clone this plugin comes from."""
+    args = [w for w in norm[1:] if not w.startswith("-")]
+    if norm[0] == "forge.sh":
+        word = next(w for w in raw if os.path.basename(w) == "forge.sh")
+        word = (shutil.which(word) or "") if word == "forge.sh" else word
+    elif norm[0] in SHELLS and "-c" not in norm and args:
+        word = args[0]
+        if os.path.basename(word) != "forge.sh":
+            return True
+    else:
+        return True
+    root = str(Path(__file__).resolve().parents[1])
+    for var in ("${CLAUDE_PLUGIN_ROOT}", "$CLAUDE_PLUGIN_ROOT"):
+        word = word.replace(var, root)
+    path = os.path.realpath(
+        os.path.join(cwd, os.path.expanduser(os.path.expandvars(word)))
+    )
+    trusted = {os.path.realpath(os.path.join(root, "forge.sh"))}
+    return bool(word) and os.path.isfile(path) and path in trusted
+
+
 def skips_hooks(words):
     """True for `git -c core.hooksPath=...`, which has the effect of --no-verify."""
     return any(
@@ -389,9 +441,101 @@ def skips_hooks(words):
     )
 
 
-def decide(tool_input, rules):
+# What every check sees. texts: (raw text, normalized text, normalized words) per part
+Command = namedtuple("Command", "cmd off parts texts download rules cwd")
+
+
+def in_rules(rules, raw, text, loose=False):
+    """Deny and ask rules also match in any case (`SUDO`, `Git Push`): more matches is the
+    safe side. Allow rules stay exact, so case never widens what runs without a question."""
+    return any(
+        matches(r, raw)
+        or matches(r, text)
+        or (
+            loose
+            and (matches(r.lower(), raw.lower()) or matches(r.lower(), text.lower()))
+        )
+        for r in rules
+    )
+
+
+def first_rule_hit(c, kind):
+    loose = kind != "allow"
+    return next(
+        (t for raw, t, _ in c.texts if in_rules(c.rules[kind], raw, t, loose)), None
+    )
+
+
+def denied_part(c):
+    seg = first_rule_hit(c, "deny")
+    return seg and f"Denied part: `{seg}`."
+
+
+def piped_download(c):
+    return (
+        c.download and "Do not pipe a download into a shell. Save it and read it first."
+    )
+
+
+def carrier_outside(c):
+    t = c.off and next((t for _, t, norm in c.texts if hidden(norm)), None)
+    return t and f"Outside the sandbox, run the command directly, not through `{t}`."
+
+
+def chain_outside(c):
+    if not c.off:
+        return None
+    steps = [x for x in c.texts if x[2][:1] != ["cd"]]
+    for stage in pipe_filters(c.cmd):
+        # One stage removes one step: an equal part elsewhere still counts
+        match = next((x for x in steps if x[0] == " ".join(stage)), None)
+        if match:
+            steps.remove(match)
+    unallowed = (t for raw, t, _ in steps if not in_rules(c.rules["allow"], raw, t))
+    t = len(steps) > 1 and next(unallowed, None)
+    return t and f"Outside the sandbox, run one specific command. Split out `{t}`."
+
+
+def coarse_download(c):
+    try:
+        risky = may_run_download(c.cmd, c.parts)
+    except ValueError:
+        risky = True  # a heredoc line can hold a quote that the split of parts drops
+    return risky and "A download may run as code here. Ask first."
+
+
+def part_warnings(raw, norm):
+    if skips_hooks(raw):
+        yield "This command turns off git hooks."
+    if encoded(norm):
+        yield "PowerShell -EncodedCommand hides the command."
+
+
+def untrusted_part(c):
+    why = next((w for raw, norm in c.parts for w in part_warnings(raw, norm)), None)
+    return why and f"{why} Ask first."
+
+
+def asked_part(c):
+    seg = first_rule_hit(c, "ask")
+    return seg and f"This command holds `{seg}`, which needs permission. Ask first."
+
+
+# Each check returns its reason, or a false value when it does not hit. The first reason
+# decides. Every deny comes before every ask, so an ask never takes the place of a deny.
+CHECKS = (
+    ("deny", denied_part),
+    ("deny", piped_download),
+    ("deny", carrier_outside),
+    ("deny", chain_outside),
+    ("ask", coarse_download),
+    ("ask", untrusted_part),
+    ("ask", asked_part),
+)
+
+
+def decide(tool_input, rules, cwd="."):
     cmd = windows_paths(tool_input.get("command", ""))
-    off = bool(tool_input.get("dangerouslyDisableSandbox"))
     try:
         sources = []
         parts = parts_of(cmd, texts=sources)
@@ -399,77 +543,16 @@ def decide(tool_input, rules):
     except ValueError:
         return "ask", "Cannot split this command safely. Ask first."
     texts = [(" ".join(raw), " ".join(norm), norm) for raw, norm in parts]
-    extra = next(
-        (
-            why
-            for raw, norm in parts
-            for why in (
-                "This command turns off git hooks." if skips_hooks(raw) else None,
-                "PowerShell -EncodedCommand hides the command."
-                if encoded(norm)
-                else None,
-            )
-            if why
-        ),
-        None,
+    off = bool(tool_input.get("dangerouslyDisableSandbox"))
+    c = Command(cmd, off, parts, texts, download, rules, cwd)
+    return next(
+        ((kind, why) for kind, test in CHECKS if (why := test(c))), (None, None)
     )
-
-    def hit(kind):
-        # Deny and ask rules also match in any case (`SUDO`, `Git Push`): more matches is the
-        # safe side. Allow rules stay exact, so case never widens what runs without a question.
-        def found(r, raw, t):
-            if matches(r, raw) or matches(r, t):
-                return True
-            return kind != "allow" and (
-                matches(r.lower(), raw.lower()) or matches(r.lower(), t.lower())
-            )
-
-        return next(
-            (t for raw, t, _ in texts if any(found(r, raw, t) for r in rules[kind])),
-            None,
-        )
-
-    if seg := hit("deny"):
-        return "deny", f"Denied part: `{seg}`."
-    if download:
-        return "deny", "Do not pipe a download into a shell. Save it and read it first."
-    if off:
-        carrier = next((t for _, t, norm in texts if hidden(norm)), None)
-        if carrier:
-            return (
-                "deny",
-                f"Outside the sandbox, run the command directly, not through `{carrier}`.",
-            )
-        steps = [x for x in texts if x[2][:1] != ["cd"]]
-        for stage in pipe_filters(cmd):
-            # One stage removes one step: an equal part elsewhere still counts
-            match = next((x for x in steps if x[0] == " ".join(stage)), None)
-            if match:
-                steps.remove(match)
-        if len(steps) > 1:
-            for raw, t, _ in steps:
-                if not any(matches(r, raw) or matches(r, t) for r in rules["allow"]):
-                    return (
-                        "deny",
-                        f"Outside the sandbox, run one specific command. Split out `{t}`.",
-                    )
-    # After every deny above, so that this ask never takes the place of a deny
-    try:
-        coarse = may_run_download(cmd, parts)
-    except ValueError:
-        coarse = True  # a heredoc line can hold a quote that the split of parts drops
-    if coarse:
-        return "ask", "A download may run as code here. Ask first."
-    if extra:
-        return "ask", f"{extra} Ask first."
-    if seg := hit("ask"):
-        return "ask", f"This command holds `{seg}`, which needs permission. Ask first."
-    return None, None
 
 
 def check(data):
     cwd = data.get("cwd") or os.getcwd()
-    decision, reason = decide(data.get("tool_input", {}), load_rules(cwd))
+    decision, reason = decide(data.get("tool_input", {}), load_rules(cwd), cwd)
     return (decision, reason) if decision else None
 
 

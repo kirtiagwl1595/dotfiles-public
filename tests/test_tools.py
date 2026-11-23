@@ -76,12 +76,12 @@ def test_check_reports_a_tool_off_path_and_writes_nothing(tmp_path):
 def test_folder_is_added_to_the_shell_file_on_yes_once(tmp_path):
     home = home_with_claude(tmp_path)
     path = stubs(tmp_path)
-    code, out = run(home, path, answers="y\n")
+    code, out = run(home, path, "--only", "tools", answers="y\n")
     assert code == 0, out
     rc = (home / ".zshrc").read_text(encoding="utf-8")
     assert 'export PATH="$HOME/.local/bin:$PATH"' in rc
     # Second run: the block is there; the terminal only needs a restart
-    code, out = run(home, path, answers="y\n")
+    code, out = run(home, path, "--only", "tools", answers="y\n")
     assert code == 0, out
     assert (home / ".zshrc").read_text(encoding="utf-8") == rc
     assert "new terminal" in out
@@ -144,7 +144,7 @@ def test_install_runs_on_yes(tmp_path):
     home = tmp_path / "home"
     home.mkdir()
     _code, _out = run(home, stubs(tmp_path, brew=recorder(log)), answers="y\n")
-    assert "brew install --cask claude-code" in log.read_text()
+    assert "brew install --cask claude-code" in log.read_text(encoding="utf-8")
 
 
 @posix_only
@@ -168,7 +168,12 @@ def test_skip_tools_only_reports(tmp_path):
     log = tmp_path / "log"
     home = home_with_claude(tmp_path)
     _code, _out = run(
-        home, stubs(tmp_path, brew=recorder(log)), "--skip-tools", answers="y\n" * 3
+        home,
+        stubs(tmp_path, brew=recorder(log)),
+        "--skip-tools",
+        "--only",
+        "tools",
+        answers="y\n" * 3,
     )
     assert not log.exists()
     assert not (home / ".zshrc").exists()
@@ -237,3 +242,30 @@ def test_a_shared_install_command_is_named_once_for_each_tool(monkeypatch, capsy
     out = capsys.readouterr().out
     assert out.count("sudo apt-get x") == 2
     assert "bwrap" in out and "socat" in out
+
+
+def test_an_unreadable_tool_folder_counts_as_not_found(tmp_path, monkeypatch):
+    """A folder the process may not read (a sandbox, another user's files) is "not found".
+    --check must still finish with its report, not stop with a traceback."""
+
+    def denied(self, *args, **kwargs):
+        raise PermissionError(1, "Operation not permitted", str(self))
+
+    monkeypatch.setattr(install, "tool_dirs", lambda name: [tmp_path])
+    monkeypatch.setattr(Path, "stat", denied)
+    assert install.off_path("claude") is None
+
+
+def test_a_config_file_we_may_not_read_is_a_message_not_a_traceback(
+    monkeypatch, capsys
+):
+    """In a sandbox, ~/.claude may be hidden. The run stops with one clear line and exit 2."""
+
+    def denied(*args, **kwargs):
+        raise PermissionError(1, "Operation not permitted", "/x/.claude/CLAUDE.md")
+
+    monkeypatch.setattr(install, "main", denied)
+    assert install.run() == 2
+    err = capsys.readouterr().err
+    assert "cannot read /x/.claude/CLAUDE.md" in err
+    assert "Traceback" not in err

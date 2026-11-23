@@ -14,7 +14,16 @@ EMAIL = re.compile(
     r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-zA-Z]{2,}\b"
 )  # a domain ends in letters: not ruff@0.17.2
 HOME_PATH = re.compile(r"(?:/Users|/home|[A-Za-z]:\\Users)[/\\](\w{2,})", re.IGNORECASE)
-PLACEHOLDER_USERS = {"x", "runner", "runneradmin", "me", "you", "user", "name"}
+PLACEHOLDER_USERS = {
+    "x",
+    "runner",
+    "runneradmin",
+    "me",
+    "you",
+    "user",
+    "name",
+    "linuxbrew",
+}
 
 
 def repo_files():

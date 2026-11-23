@@ -1,0 +1,8 @@
+{
+  "name": "ecc-picks",
+  "version": "2.2.3",
+  "description": "Selected skills from everything-claude-code (ECC) 2.2.3, MIT: eval-harness. Copied, not installed, to keep the per-session token cost small.",
+  "author": { "name": "Affaan Mustafa (ECC); picked for dotfiles-public" },
+  "homepage": "https://github.com/affaan-m/everything-claude-code",
+  "license": "MIT"
+}

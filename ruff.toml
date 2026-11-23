@@ -1,4 +1,6 @@
 target-version = "py39"
+# Unmodified Apache 2.0 copies of Anthropic skills: keep them byte-identical to upstream.
+extend-exclude = ["claude/plugins/anthropic-skills"]
 
 [lint]
 extend-select = ["UP", "B"]

@@ -293,3 +293,73 @@ def test_git_bash_drive_path_is_followed(repo, tmp_path_factory):
     posix = "/" + drive.rstrip(":").lower() + rest.replace("\\", "/")
     cmd = f"cd {posix} && git commit -m x"
     assert decision("guard_main_branch.py", bash(cmd, cwd=other)) == "block"
+
+
+# ── guard_secrets: the ROOTS table in Windows forms ─────────────────────────
+@pytest.mark.parametrize(
+    "path",
+    [
+        r"C:\Users\x\Documents\taxes.docx",
+        r"C:\Users\user\Documents\taxes.docx",  # another user's home is a home
+        "/mnt/c/Users/user/Documents/taxes.docx",
+        "/c/Users/user/DOCUMENTS/taxes.docx",
+        r"~\Documents\taxes.docx",
+        r"C:\repo\.ENV",
+        r"C:\repo\prod.env",
+        r"D:\work\.aws\credentials",
+    ],
+)
+def test_roots_in_windows_forms_block_the_file_tools(path):
+    assert decision("guard_secrets.py", file_tool("Read", path)) == "block"
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        r"Get-Content %USERPROFILE%\Documents\taxes.docx",
+        r"type C:\Users\user\Documents\taxes.docx",
+        r"Get-Content $env:USERPROFILE\.aws\credentials",
+        r"Get-Content ~\.ss*\id_rsa",
+        r"Get-Content .\.env",
+        r"Get-Content 'C:\Users\x\AppData\Roaming\GitHub CLI\hosts.yml'",
+        r"Set-Content ~\.ssh\config -Value x",
+        r"echo x > $env:USERPROFILE\.ssh\config",
+    ],
+)
+@pytest.mark.parametrize("make", [bash, powershell])
+def test_roots_in_windows_forms_block_the_shells(cmd, make):
+    assert decision("guard_secrets.py", make(cmd)) == "block"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        file_tool("Read", r"C:\repo\Documents\notes.md"),
+        file_tool("Read", r"C:\Users\x\Downloads\a.txt"),
+        file_tool("Read", r"C:\Users\x\.ssh\known_hosts"),
+        powershell(r"Get-ChildItem C:\repo\Documents"),
+        powershell(r"Get-Content ~\.ssh\config"),
+        bash("dir C:\\Users\\x\\Downloads"),
+    ],
+)
+def test_ordinary_forms_next_to_the_roots_stay_allowed(payload, tmp_path):
+    assert quiet("guard_secrets.py", {**payload, "cwd": str(tmp_path)}, home=tmp_path)
+
+
+# ── the other new hooks ──────────────────────────────────────────────────────
+def test_a_windows_cwd_with_backslashes_still_finds_a_live_checkout(tmp_path):
+    # The guard reads the cwd as Claude Code sends it; on Windows that has backslashes
+    repo = tmp_path / "live"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
+    config = tmp_path / ".config" / "claude"
+    config.mkdir(parents=True)
+    (config / "live-checkout.txt").write_text(f"{repo}\n", encoding="utf-8")
+    cwd = str(repo).replace("/", "\\") if os.name == "nt" else str(repo)
+    payload = powershell("GIT.EXE switch main", cwd=cwd)
+    assert decision("guard_live_checkout.py", payload, home=tmp_path) == "deny"
+
+
+def test_guard_egm_ignores_powershell_and_file_tools():
+    for payload in (powershell("Get-ChildItem"), file_tool("Read", r"C:\repo\a.py")):
+        assert quiet("guard_egm.py", payload)

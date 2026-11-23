@@ -8,6 +8,12 @@
 
   --skip-plugin  do not run `claude plugin ...` (for tests, or before Claude Code is installed)
   --skip-tools   only report the tools; do not install them or change PATH
+  --only STEP    run only the named steps: tools, rules, settings, git, plugin, delta, shell,
+                 statusline, templates, macos, packages (repeat the option for more)
+  --profile P    the package profile (minimal, developer, full, work): skips the menu
+  --manager M    brew, apt or winget: the default fits your system
+  --yes-packages answer yes to each package group (the profile is still your choice)
+  pkg add|keep|list|brewfile   your own packages; see packages/pkgs.py
 
 It adds and never removes your own values. Before it replaces a value that is weaker than the
 safe one (for example bypass mode, or auto mode as the start mode), it asks you. A tool that is
@@ -15,6 +21,10 @@ installed but not on PATH: it asks, then adds the folder to PATH. A tool that is
 asks, then installs it (winget, brew, apt-get, or the Claude Code installer). It never sets
 your git name, email, signing key or credential helper. Before it changes a file, it saves a
 copy as <file>.bak. To undo, put the .bak files back.
+
+Packages: it asks for a profile (a numbered menu; the default is to skip), then asks for each
+group of packages. brew, apt-get and winget only run after your yes. With no terminal (stdin
+closed), every question gets its default, No. --check lists the plan and installs nothing.
 """
 
 import argparse
@@ -33,7 +43,9 @@ if sys.version_info < (3, 9):  # noqa: UP036 - an old python3 must get a message
 ROOT = Path(__file__).resolve().parent
 CLAUDE_SRC = ROOT / "claude"
 sys.path.insert(0, str(CLAUDE_SRC))
+sys.path.insert(0, str(ROOT / "packages"))
 import merge_settings
+import pkgs
 
 SYSTEM = platform.system()  # Darwin, Linux or Windows
 WINDOWS = SYSTEM == "Windows"
@@ -72,6 +84,16 @@ class Report:
 
 
 # ── tools ───────────────────────────────────────────────────────────────────
+def is_file(path):
+    """Path.is_file(), but a path we may not read (a sandbox, another user's folder) is no file.
+
+    Path.is_file() hides only "not found" errors; a PermissionError would stop --check."""
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
 def git_bash():
     """Git Bash on Windows. Claude Code runs hooks in it; without it the guards fail open."""
     roots = [
@@ -81,7 +103,7 @@ def git_bash():
     for root in filter(None, roots):
         for sub in (("Git", "bin", "bash.exe"), ("Programs", "Git", "bin", "bash.exe")):
             path = Path(root, *sub)
-            if path.is_file():
+            if is_file(path):
                 return str(path)
     found = shutil.which("bash")
     # C:\Windows\System32\bash.exe is WSL, not Git Bash
@@ -105,7 +127,7 @@ def off_path(name):
     """The folder that holds this tool when PATH does not reach it, else None."""
     exe = name + (".exe" if WINDOWS else "")
     for folder in tool_dirs(name):
-        if (folder / exe).is_file() and os.access(folder / exe, os.X_OK):
+        if is_file(folder / exe) and os.access(folder / exe, os.X_OK):
             return folder
     return None
 
@@ -153,11 +175,13 @@ def shell_file():
     shell = os.path.basename(os.environ.get("SHELL", ""))
     home = Path.home()
     if shell == "zsh":
-        return home / ".zshrc"
-    if shell == "bash":
+        target = home / ".zshrc"
+    elif shell == "bash":
         # macOS Terminal starts bash as a login shell, which reads ~/.bash_profile only
-        return home / (".bash_profile" if SYSTEM == "Darwin" else ".bashrc")
-    return home / ".profile"
+        target = home / (".bash_profile" if SYSTEM == "Darwin" else ".bashrc")
+    else:
+        target = home / ".profile"
+    return target
 
 
 def path_line(folder):
@@ -478,7 +502,7 @@ def retired_values(live):
 
 
 def ask(question, prompt="Replace it?"):
-    print(f"  {question} {prompt} [y/N] ", end="", flush=True)
+    print(f"  {' '.join(filter(None, [question, prompt]))} [y/N] ", end="", flush=True)
     answer = sys.stdin.readline()
     print()
     return answer.strip().lower() in ("y", "yes")
@@ -626,7 +650,381 @@ def update_plugin(report, exe):
         report.line("kept", f"old {PLUGIN} copy. Later: {text}")
 
 
+def setup_delta(report):
+    print("Git pager (delta)")
+    if not shutil.which("delta"):
+        report.line("skipped", "delta is not installed (package git-delta)")
+        return
+    target = Path.home() / ".gitconfig"
+    text = target.read_text(encoding="utf-8") if target.exists() else ""
+    shared = home_form(ROOT / "git" / "config.shared")
+    delta = home_form(ROOT / "git" / "config.delta")
+    if delta in text:
+        report.line("ok", f"{target} includes git/config.delta")
+    elif report.check:
+        report.line("would", "ask to use delta as the git pager (git/config.delta)")
+    elif ask(
+        "delta is installed.", "Use it as the git pager (includes git/config.delta)?"
+    ):
+        line = f"\tpath = {shared}\n"
+        new = text.replace(line, f"{line}\tpath = {delta}\n", 1)
+        if new == text:  # no shared include to sit under: add a block at the end
+            new = f"{text.rstrip()}\n[include]\n\tpath = {delta}\n".lstrip()
+        save(report, target, new, "includes git/config.delta")
+    else:
+        report.line("kept", "git pager")
+
+
+# ── shell config ────────────────────────────────────────────────────────────
+def documents_folder():
+    """Where Documents is: the registry value follows a OneDrive move; else ~/Documents."""
+    try:
+        import winreg
+
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+        )
+        try:
+            value, _ = winreg.QueryValueEx(key, "Personal")
+        finally:
+            winreg.CloseKey(key)
+        return Path(os.path.expandvars(value))
+    except (ImportError, OSError):
+        return Path.home() / "Documents"
+
+
+def powershell_profiles():
+    """[(path, policy)] for each PowerShell here: the file it reads at start, its execution policy.
+
+    The path is Documents\\<PowerShell or WindowsPowerShell>\\Microsoft.PowerShell_profile.ps1,
+    with Documents from the registry: it follows a OneDrive move and is the same on every run.
+    PowerShell is asked only for its execution policy (None when the question fails); its own
+    $PROFILE answer is not used, because 5.1 and 7 can resolve Documents differently.
+    A computer with neither program gets no entry: no shell would read the file.
+    """
+    found = []
+    for exe, folder in (("pwsh", "PowerShell"), ("powershell", "WindowsPowerShell")):
+        path = shutil.which(exe)
+        if not path:
+            continue
+        try:
+            p = subprocess.run(
+                [path, "-NoProfile", "-Command", "Get-ExecutionPolicy"],
+                capture_output=True,
+                stdin=subprocess.DEVNULL,  # it must not read the answers meant for ask()
+                text=True,
+                encoding="utf-8",
+                check=False,
+                timeout=60,
+            )
+            policy = p.stdout.strip() if p.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            policy = ""
+        target = documents_folder() / folder / "Microsoft.PowerShell_profile.ps1"
+        found.append((target, policy or None))
+    return found
+
+
+def config_files():
+    """[(source in this clone, target in the home folder)] to link or copy."""
+    home = Path.home()
+    files = [
+        (ROOT / "shell" / "vim" / ".vimrc", home / ".vimrc"),
+        (ROOT / "shell" / "starship.toml", home / ".config" / "starship.toml"),
+        (ROOT / "shell" / "editorconfig", home / ".editorconfig"),
+    ]
+    if WINDOWS:
+        profile = ROOT / "shell" / "powershell" / "Microsoft.PowerShell_profile.ps1"
+        files += [(profile, path) for path, _ in powershell_profiles()]
+    return files
+
+
+def zsh_blocks():
+    """[(file in this clone, your file)]: your file gets a block that sources the clone file."""
+    zsh, home = ROOT / "shell" / "zsh", Path.home()
+    return [(zsh / ".zshrc", home / ".zshrc"), (zsh / ".zprofile", home / ".zprofile")]
+
+
+def block_markers(name):
+    return f"# >>> dotfiles-public {name} >>>", f"# <<< dotfiles-public {name} <<<"
+
+
+def set_block(text, name, body):
+    """text with the block `name` set to body: replaced if it is there, else added at the end."""
+    start, end = block_markers(name)
+    lines = text.splitlines()
+    if start in lines and end in lines:
+        i, j = lines.index(start), lines.index(end)
+        lines[i : j + 1] = [start, *body, end]
+        return "\n".join(lines) + "\n"
+    sep = "" if not text or text.endswith("\n") else "\n"
+    return f"{text}{sep}{start}\n" + "\n".join(body) + f"\n{end}\n"
+
+
+def place_block(report, src, dst):
+    """Add a block to your own file that sources src. The rest of your file stays as it is."""
+    shown = home_form(dst)
+    text = dst.read_text(encoding="utf-8") if dst.exists() else ""
+    try:
+        where = '"$HOME/' + src.relative_to(Path.home()).as_posix() + '"'
+    except ValueError:
+        where = f'"{src.as_posix()}"'
+    new = set_block(text, "zsh", [f"[[ -f {where} ]] && source {where}"])
+    if new == text:
+        report.line("ok", f"{shown} sources {src.relative_to(ROOT).as_posix()}")
+    elif report.check:
+        report.line("would", f"ask to add a block to {shown} that sources {src.name}")
+    elif ask(
+        f"{shown} {'exists' if dst.exists() else 'is missing'}.",
+        f"Add a block that sources {src.name}? Your own lines stay; the old file is saved as {shown}.bak.",
+    ):
+        save(report, dst, new, f"sources {src.relative_to(ROOT).as_posix()}")
+    else:
+        report.line("kept", shown)
+
+
+def same_as(src, dst):
+    if WINDOWS:  # Windows copies: a symlink there needs special rights
+        return dst.is_file() and dst.read_bytes() == src.read_bytes()
+    return dst.is_symlink() and dst.resolve() == src.resolve()
+
+
+def place(report, src, dst):
+    shown, what = home_form(dst), "copy" if WINDOWS else "link"
+    if same_as(src, dst):
+        report.line("ok", f"{shown} is a {what} of {src.relative_to(ROOT).as_posix()}")
+        return
+    exists = dst.exists() or dst.is_symlink()
+    if report.check:
+        report.line("would", f"ask to put a {what} of {src.name} at {shown}")
+        return
+    state = f"{shown} exists." if exists else f"{shown} is missing."
+    saved = f" The old file is saved as {shown}.bak." if exists else ""
+    if not ask(state, f"Put a {what} of {src.name} there?{saved}"):
+        report.line("kept", shown)
+        return
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if exists:
+            os.replace(dst, dst.with_name(dst.name + ".bak"))
+        if WINDOWS:
+            shutil.copyfile(src, dst)
+        else:
+            os.symlink(src, dst)
+    except OSError as err:
+        report.fail(f"{shown}: {err}")
+        return
+    report.line("changed", f"{shown} is a {what} of {src.name}")
+
+
+def setup_shell(report):
+    print("Shell config (zsh or PowerShell, vim, starship, editorconfig)")
+    if not WINDOWS:
+        for src, dst in zsh_blocks():
+            place_block(report, src, dst)
+    else:
+        profiles = powershell_profiles()
+        if not profiles:
+            report.line(
+                "skipped", "no PowerShell found (pwsh or powershell): no profile to set"
+            )
+        if any(policy == "Restricted" for _, policy in profiles):
+            report.line(
+                "note",
+                "The execution policy is Restricted: PowerShell will not load a profile. "
+                "To allow it, run yourself: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned",
+            )
+    for src, dst in config_files():
+        place(report, src, dst)
+
+
+# ── Claude Code status line, templates, macOS defaults ──────────────────────
+def setup_statusline(report):
+    print("Status line (Claude Code)")
+    command = f'bash "{(CLAUDE_SRC / "statusline.sh").as_posix()}"'
+    target = Path.home() / ".claude" / "settings.json"
+    live = load_json(target)
+    current = live.get("statusLine")
+    if isinstance(current, dict) and current.get("command") == command:
+        report.line("ok", "status line is claude/statusline.sh")
+        return
+    if report.check:
+        report.line("would", "ask to use claude/statusline.sh as the status line")
+        return
+    state = "You have a status line already." if current else "No status line is set."
+    if not ask(state, "Use claude/statusline.sh (model, context, git branch, cost)?"):
+        report.line("kept", "status line")
+        return
+    live["statusLine"] = {"type": "command", "command": command}
+    save(report, target, json.dumps(live, indent=2) + "\n", "uses claude/statusline.sh")
+
+
+TEMPLATES = ("CLAUDE.about-me", "CLAUDE.profile")
+
+
+def setup_templates(report):
+    print("Personal templates (~/.claude)")
+    for name in TEMPLATES:
+        src = CLAUDE_SRC / f"{name}.example.md"
+        dst = Path.home() / ".claude" / f"{name}.md"
+        shown = home_form(dst)
+        if dst.exists():
+            report.line("ok", f"{shown} exists; never replaced")
+        elif report.check:
+            report.line("would", f"ask to copy {src.name} to {shown}")
+        elif ask(f"{shown} is missing.", f"Copy the template {src.name} there?"):
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dst)
+            report.line(
+                "changed",
+                f"{shown}. Fill it in, then add this line to ~/.claude/CLAUDE.md:",
+            )
+            report.line("", f"@{shown}")
+        else:
+            report.line("kept", f"no {shown}")
+
+
+def real_home():
+    """The home folder of this user account, whatever $HOME says."""
+    import pwd
+
+    return Path(pwd.getpwuid(os.getuid()).pw_dir)
+
+
+def setup_macos(report):
+    print("macOS defaults (Finder, Dock, keyboard)")
+    if SYSTEM != "Darwin":
+        report.line("skipped", "macOS only")
+        return
+    if real_home() != Path.home():
+        # `defaults` writes the real preferences, not the folder in $HOME
+        report.line("skipped", f"$HOME is not your real home folder ({real_home()})")
+        return
+    script = ROOT / "scripts" / "macos-defaults.sh"
+    if report.check:
+        report.line("would", f"ask to run scripts/{script.name}")
+    elif ask(
+        "Finder, Dock and keyboard settings.",
+        f"Run scripts/{script.name}? It saves your values first.",
+    ):
+        env = {**os.environ, "DOTFILES_MACOS_OK": "1"}
+        code = subprocess.run(["bash", str(script)], env=env, check=False).returncode
+        if code:
+            report.fail(f"scripts/{script.name} exit code {code}")
+        else:
+            report.line("changed", f"ran scripts/{script.name}")
+    else:
+        report.line("kept", "macOS settings")
+
+
+# ── packages ────────────────────────────────────────────────────────────────
+def plural(n):
+    return f"{n} package{'s' if n != 1 else ''}"
+
+
+def choose_profile(manifest, manager):
+    """A numbered menu. Only a number or an exact name picks a profile; all else skips."""
+    names = list(manifest["profiles"])
+    print("  Package profile:")
+    for i, name in enumerate(names, 1):
+        n = pkgs.count(manifest, name, manager)
+        text = manifest["profiles"][name]["description"]
+        print(f"    {i}. {name:<10} {text} ({plural(n)} for {manager})")
+    print("    0. skip (default)")
+    print(f"  Profile [0-{len(names)}]: ", end="", flush=True)
+    answer = sys.stdin.readline().strip().lower()
+    print()
+    if answer.isdigit() and 1 <= int(answer) <= len(names):
+        return names[int(answer) - 1]
+    return answer if answer in names else None
+
+
+def setup_packages(report, args):
+    print("Packages")
+    manifest = pkgs.load()
+    profiles = list(manifest["profiles"])
+    if args.profile and args.profile not in profiles:
+        print(f"  No profile {args.profile}. Profiles: {', '.join(profiles)}")
+        report.failed = True
+        return
+    manager = args.manager or pkgs.default_manager(SYSTEM)
+    exe = pkgs.find_manager(manager)
+    if not exe:
+        text = f"{pkgs.PROGRAM[manager]} not found. Fix: {pkgs.FIX[manager]}"
+        if args.profile and not report.check:
+            report.fail(text)  # you named a profile: it cannot be installed
+            return
+        report.line("missing", text)
+        if not report.check:
+            return
+    profile = args.profile
+    if not profile and report.check:
+        for name in profiles:
+            n = pkgs.count(manifest, name, manager)
+            report.line(
+                "plan",
+                f"{name}: {plural(n)} for {manager}. Add --profile {name} to see the groups.",
+            )
+        return
+    if not profile:
+        profile = choose_profile(manifest, manager)
+    if not profile:
+        report.line("skipped", "no package profile chosen")
+        return
+    failed, updated = [], False
+    for group, spec in pkgs.groups_for(manifest, profile):
+        have, missing = pkgs.split(spec, manager)
+        for p in missing:
+            report.line(
+                "skipped",
+                f"{p['name']}: no {manager} package. {p.get('note', '')}".rstrip(),
+            )
+        if not have:
+            continue
+        names = ", ".join(p["name"] for p in have)
+        if report.check:
+            report.line("would", f"install {group} ({plural(len(have))}): {names}")
+            continue
+        report.line("group", f"{group}: {names}")
+        for cmd in pkgs.batch_commands(manager, exe, have):
+            report.line("run", " ".join(cmd))
+        if args.yes_packages:
+            print(f"  Install {group} ({plural(len(have))})? [y/N] y")
+        elif not ask(f"Install {group} ({plural(len(have))})?", ""):
+            report.line("kept", f"{group} not installed")
+            continue
+        if manager == "apt" and not updated:
+            updated = True  # once per run, after the first yes
+            if not pkgs.run(pkgs.apt_update_command(), manager):
+                report.line(
+                    "note", "apt-get update failed; the install may use an old index"
+                )
+        failed += pkgs.install_group(manager, exe, have)
+    for name in failed:
+        report.fail(f"{manager} could not install {name}")
+    if not report.check and not failed:
+        report.line("done", f"profile {profile}")
+
+
+STEPS = (
+    "tools",
+    "rules",
+    "settings",
+    "git",
+    "plugin",
+    "delta",
+    "shell",
+    "statusline",
+    "templates",
+    "macos",
+    "packages",
+)
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "pkg":
+        return pkgs.cli(sys.argv[2:], SYSTEM)
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument(
         "--check", action="store_true", help="show what would change; change nothing"
@@ -639,17 +1037,46 @@ def main():
         action="store_true",
         help="only report the tools; do not install them or change PATH",
     )
+    parser.add_argument(
+        "--only", action="append", choices=STEPS, help="run only this step (repeatable)"
+    )
+    parser.add_argument("--profile", help="package profile: skips the menu")
+    parser.add_argument("--manager", choices=pkgs.MANAGERS, help="brew, apt or winget")
+    parser.add_argument(
+        "--yes-packages", action="store_true", help="answer yes to each package group"
+    )
     args = parser.parse_args()
     report = Report(args.check)
     print(f"dotfiles-public install{' --check' if args.check else ''} on {SYSTEM}\n")
-    check_tools(report, fix=not args.skip_tools)
-    if report.failed and not args.check:
-        return 1
-    setup_rules(report)
-    setup_settings(report)
-    setup_git(report)
-    if not args.skip_plugin:
+
+    def wanted(step):
+        return not args.only or step in args.only
+
+    # One rule: with --only, exactly the named steps run; without it, all of them run
+    if wanted("tools"):
+        check_tools(report, fix=not args.skip_tools)
+        if report.failed and not args.check:
+            return 1
+    if wanted("rules"):
+        setup_rules(report)
+    if wanted("settings"):
+        setup_settings(report)
+    if wanted("git"):
+        setup_git(report)
+    if wanted("plugin") and not args.skip_plugin:
         setup_plugin(report)
+    # New steps come last: a question in an earlier step keeps its place in the answers
+    for step, run in (
+        ("delta", setup_delta),
+        ("shell", setup_shell),
+        ("statusline", setup_statusline),
+        ("templates", setup_templates),
+        ("macos", setup_macos),
+    ):
+        if wanted(step):
+            run(report)
+    if wanted("packages"):
+        setup_packages(report, args)
     if report.failed:
         print("\nSome steps failed. Read the FAILED lines above.")
         return 1
@@ -660,5 +1087,18 @@ def main():
     return 0
 
 
+def run():
+    """main(), with a file we may not read reported as one line: a sandbox can hide ~/.claude."""
+    try:
+        return main()
+    except PermissionError as e:
+        print(
+            f"install.py: cannot read {e.filename}: {e.strerror}. "
+            "Run it in a normal terminal, outside a sandbox.",
+            file=sys.stderr,
+        )
+        return 2
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())

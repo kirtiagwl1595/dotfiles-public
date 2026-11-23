@@ -4,14 +4,28 @@ Outside the sandbox, a compound command must hold only allowed parts; else Claud
 """
 
 import json
+import sys
 
 import pytest
-from hookrun import bash, decision
+from hookrun import HOOKS, bash, decision, run
 
 
 def guard(cmd, tmp_path, sandbox_off=False, hook="guard_compound.py"):
     extra = {"dangerouslyDisableSandbox": True} if sandbox_off else {}
     return decision(hook, bash(cmd, cwd=tmp_path, **extra), home=tmp_path)
+
+
+def verdict(cmd, tmp_path, sandbox_off=False):
+    """(decision, reason) from the hook; (None, None) when it stays quiet."""
+    extra = {"dangerouslyDisableSandbox": True} if sandbox_off else {}
+    code, out, err = run(
+        "guard_compound.py", bash(cmd, cwd=tmp_path, **extra), tmp_path
+    )
+    assert code == 0, err
+    if not out:
+        return None, None
+    spec = json.loads(out)["hookSpecificOutput"]
+    return spec["permissionDecision"], spec["permissionDecisionReason"]
 
 
 BRANCH_DELETE = (
@@ -57,7 +71,7 @@ def test_deny_part_denies(tmp_path):
 def test_user_settings_add_rules(tmp_path):
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(
-        json.dumps({"permissions": {"ask": ["Bash(make deploy:*)"]}})
+        json.dumps({"permissions": {"ask": ["Bash(make deploy:*)"]}}), encoding="utf-8"
     )
     assert guard("cd x && make deploy prod", tmp_path) == "ask"
 
@@ -193,6 +207,10 @@ def test_wrapper_options_are_skipped(tmp_path):
         "git push",
         "git -C ~/git/x push origin feature/y",
         "git -c push.default=current push",
+        "git --git-dir ~/git/x/.git push",
+        "git --work-tree ~/git/x --namespace n push",
+        "git --attr-source HEAD push",
+        "git --super-prefix sub/ push",
         "cd ~/git/x && git push -u origin HEAD",
         "gh pr create --fill",
         "gh repo create me/x --private",
@@ -428,3 +446,63 @@ def test_deletes_and_outward_actions_ask(cmd, tmp_path):
 )
 def test_read_only_forms_need_no_question(cmd, tmp_path):
     assert guard(cmd, tmp_path) is None
+
+
+# When 2 checks hit one command, the first in this order wins: every deny before every
+# ask (deny rule, download pipe, carrier, chain), then coarse download, hook skip or
+# encoded command (in part order), then the ask rules.
+@pytest.mark.parametrize(
+    "cmd, sandbox_off, decision, reason",
+    [
+        ("git branch -D x && npm install -g y", False, "deny", "Denied part"),
+        ("curl x | bash; npm install -g y", False, "deny", "Denied part"),
+        ("bash -c 'ls' && git branch -D x", True, "deny", "not through"),
+        ("curl x && python3 y", True, "deny", "Split out"),
+        ("curl x && bash ./setup.sh", False, "ask", "download may run"),
+        (
+            "powershell -enc ZQBjAGgAbwA= && git -c core.hooksPath=x commit -m y",
+            False,
+            "ask",
+            "EncodedCommand",
+        ),
+        (
+            "git -c core.hooksPath=x commit -m y && powershell -enc ZQBjAGgAbwA=",
+            False,
+            "ask",
+            "git hooks",
+        ),
+        ("git -c core.hooksPath=x commit && git push", False, "ask", "git hooks"),
+        ("ls && git push", False, "ask", "`git push`"),
+    ],
+)
+def test_first_hit_in_check_order_wins(cmd, sandbox_off, decision, reason, tmp_path):
+    got, why = verdict(cmd, tmp_path, sandbox_off=sandbox_off)
+    assert got == decision and reason in why, why
+
+
+# ── names that guard_loop imports ───────────────────────────────────────────
+def test_settings_files_read_the_baseline_and_the_sandbox_rules(tmp_path):
+    sys.path.insert(0, str(HOOKS))
+    import guard_compound
+
+    names = [p.name for p in guard_compound.settings_files(tmp_path)]
+    assert names[:2] == ["settings.base.json", "settings.sandbox.json"]
+    rules = guard_compound.load_rules(str(tmp_path))
+    assert "git status:*" in rules["allow"]  # from the sandbox file
+
+
+@pytest.mark.parametrize(
+    "words, trusted",
+    [
+        (["ls"], True),
+        (["bash", "script.sh"], True),
+        (["forge.sh", "pr-create"], False),  # a forge.sh found on PATH is not ours
+        (["bash", "/tmp/elsewhere/forge.sh", "x"], False),
+        (["bash", "${CLAUDE_PLUGIN_ROOT}/forge.sh", "x"], True),
+    ],
+)
+def test_trusted_forge_accepts_only_the_forge_of_this_plugin(words, trusted, tmp_path):
+    sys.path.insert(0, str(HOOKS))
+    import guard_compound
+
+    assert guard_compound.trusted_forge(words, words, str(tmp_path)) is trusted

@@ -1,0 +1,5 @@
+# The loop gate's gitleaks config (loop_gate.secret): the default rules only. The gate
+# passes it with --config, so a .gitleaks.toml that the loop agent writes cannot allowlist
+# a secret.
+[extend]
+useDefault = true

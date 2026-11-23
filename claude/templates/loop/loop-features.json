@@ -1,0 +1,10 @@
+[
+  {
+    "id": "<short-id>",
+    "category": "behavior",
+    "description": "<what the real run path must do>",
+    "steps": ["<how a person checks it by hand>"],
+    "verify": "<shell command; exit 0 means pass>",
+    "passes": false
+  }
+]

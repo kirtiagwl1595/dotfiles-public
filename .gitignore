@@ -7,4 +7,9 @@ __pycache__/
 .claude/lessons/
 .claude/.cc-writes/
 .claude/settings.local.json
+.claude/worktrees/
 CLAUDE.local.md
+
+# Your own package lists (install.py pkg add / keep)
+packages/local.json
+packages/trials.json

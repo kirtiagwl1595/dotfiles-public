@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from hookrun import ROOT, env_for
+from installrun import left_over
 from test_launcher import bash_exe, stub_dir
 
 INSTALL_SH = ROOT / "install.sh"
@@ -50,7 +51,7 @@ def test_sh_check_runs_install_py_and_changes_nothing(tmp_path):
     )
     assert code == 0, out
     assert "Tools" in out and "settings.json" in out
-    assert list(home.iterdir()) == []
+    assert left_over(home) == []
 
 
 def test_sh_without_python_and_without_a_package_manager_says_what_to_do(tmp_path):
@@ -89,7 +90,7 @@ def test_sh_installs_python_on_yes_then_runs_install_py(tmp_path):
     stub_dir(tmp_path, brew=body)
     # PATH has only the stubs, so no real Python hides the "no Python" case
     code, out = run_sh(tmp_path, str(stubs), "--check", "--skip-plugin", answers="y\n")
-    assert "brew install python" in log.read_text()
+    assert "brew install python" in log.read_text(encoding="utf-8")
     # install.py ran: without git on this PATH it reports git as missing
     assert "Tools" in out and "git" in out, (code, out)
 
@@ -98,7 +99,7 @@ def test_sh_apt_install_goes_through_sudo(tmp_path):
     log = tmp_path / "log"
     stubs = stub_dir(tmp_path, **{"apt-get": "exit 0", "sudo": recorder(log)})
     run_sh(tmp_path, str(stubs), answers="y\n")
-    assert "apt-get install -y python3" in log.read_text()
+    assert "apt-get install -y python3" in log.read_text(encoding="utf-8")
 
 
 def test_sh_failed_python_install_stops_with_a_message(tmp_path):

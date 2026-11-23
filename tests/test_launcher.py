@@ -64,6 +64,9 @@ def real_python(tmp_path):
     return stub_dir(tmp_path, python3=f'exec "{exe}" "$@"')
 
 
+ADVISORY = "--advisory"
+
+
 def test_no_python_blocks(tmp_path):
     code, _, err = launch("guard_bash.py", bash("ls"), stub_dir(tmp_path))
     assert code == 2
@@ -113,7 +116,10 @@ COMMANDS = [
 def test_every_hook_starts_through_the_launcher(matcher, command):
     prefix = 'bash "${CLAUDE_PLUGIN_ROOT}/hooks/py.sh" '
     assert command.startswith(prefix)
-    assert (HOOKS / command.removeprefix(prefix)).is_file()
+    words = command.removeprefix(prefix).split()
+    if words[0] == ADVISORY:
+        words = words[1:]
+    assert (HOOKS / words[0]).is_file()  # arguments follow
 
 
 def test_shell_tools_and_file_tools_are_guarded():
@@ -132,7 +138,7 @@ def test_shell_tools_and_file_tools_are_guarded():
 def test_launcher_has_unix_line_ends():
     # A CRLF checkout breaks bash: `$'\r': command not found`, which is not exit 2
     assert b"\r\n" not in PY_SH.read_bytes()
-    assert "*.sh text eol=lf" in (ROOT / ".gitattributes").read_text()
+    assert "*.sh text eol=lf" in (ROOT / ".gitattributes").read_text(encoding="utf-8")
 
 
 def test_launcher_passes_the_arguments_after_the_script(tmp_path):
@@ -161,3 +167,50 @@ def test_launcher_passes_the_arguments_after_the_script(tmp_path):
         check=False,
     )
     assert p.stdout.strip() == "['apply', 'a b']", p.stderr
+
+
+# ── advisory hooks: no Python means do nothing, never block ─────────────────
+def launch_advisory(script, payload, path_dir):
+    env = env_for()
+    env["PATH"] = str(path_dir)
+    p = subprocess.run(
+        [bash_exe(), str(PY_SH), ADVISORY, script],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=env,
+        check=False,
+    )
+    return p.returncode, p.stdout, p.stderr
+
+
+def test_advisory_hook_with_no_python_exits_0_silently(tmp_path):
+    assert launch_advisory("coach_prompt.py", {"prompt": "x"}, stub_dir(tmp_path)) == (
+        0,
+        "",
+        "",
+    )
+
+
+def test_advisory_hook_with_only_the_store_stub_exits_0_silently(tmp_path):
+    stubs = stub_dir(tmp_path, python3="exit 9009", python="exit 9009", py="exit 9009")
+    assert launch_advisory("coach_prompt.py", {"prompt": "x"}, stubs) == (0, "", "")
+
+
+def test_advisory_hook_with_python_still_runs(tmp_path):
+    path = real_python(tmp_path)
+    code, out, _ = launch_advisory("coach_prompt.py", {"prompt": "x " * 1200}, path)
+    assert code == 0 and "plan mode" in out.lower()
+
+
+def test_a_guard_with_no_python_still_blocks_even_after_the_flag_exists(tmp_path):
+    assert launch("guard_secrets.py", bash("ls"), stub_dir(tmp_path))[0] == 2
+
+
+def test_only_pre_tool_use_hooks_fail_closed():
+    """The rule, not a name list: a PreToolUse hook blocks without Python; any other advises."""
+    for event, entries in HOOKS_JSON["hooks"].items():
+        for entry in entries:
+            for hook in entry["hooks"]:
+                assert (f" {ADVISORY} " in hook["command"]) == (event != "PreToolUse")

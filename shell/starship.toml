@@ -1,0 +1,73 @@
+# Starship config: informative without clutter
+# Docs: https://starship.rs/config/
+
+# ── Top-level ─────────────────────────────────────────────────────────────────
+add_newline = true    # blank line before each prompt for breathing room
+
+format = """
+$directory$git_branch$git_status$python$nodejs$rust$ruby$golang$java$package
+$character"""
+
+# ── Directory ─────────────────────────────────────────────────────────────────
+[directory]
+truncation_length = 3       # show up to 3 path components
+truncate_to_repo = true     # if inside a git repo, root is the repo root
+style = "bold blue"
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+[git_branch]
+symbol = " "
+style = "bold purple"
+
+[git_status]
+# compact: only show counts, suppress when clean
+format = '([ $all_status$ahead_behind]($style) )'
+style = "bold yellow"
+conflicted = "⚡${count} "
+ahead      = "⇡${count} "
+behind     = "⇣${count} "
+diverged   = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked  = "?${count} "
+stashed    = "≡ "
+modified   = "!${count} "
+staged     = "+${count} "
+deleted    = "✘${count} "
+
+# ── Languages: only shown when relevant files are present ────────────────────
+[python]
+symbol = " "
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+style = "bold yellow"
+detect_extensions = ["py"]
+detect_files = ["pyproject.toml", "requirements.txt", "Pipfile", ".python-version"]
+
+[nodejs]
+symbol = " "
+style = "bold green"
+detect_files = ["package.json", ".node-version", ".nvmrc"]
+
+[rust]
+symbol = " "
+style = "bold red"
+
+[ruby]
+symbol = " "
+style = "bold red"
+detect_files = ["Gemfile", ".ruby-version"]
+
+[golang]
+symbol = " "
+style = "bold cyan"
+
+[java]
+symbol = " "
+style = "bold red"
+
+[package]
+symbol = "󰏗 "
+style = "bold 208"    # orange
+
+# ── Prompt character ──────────────────────────────────────────────────────────
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol   = "[❯](bold red)"    # turns red on non-zero exit code

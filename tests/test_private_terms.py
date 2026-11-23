@@ -11,7 +11,9 @@ TERM = "acme-corp"
 def home(tmp_path):
     terms = tmp_path / ".config" / "claude" / "private-terms.txt"
     terms.parent.mkdir(parents=True)
-    terms.write_text(f"# one term per line\n{TERM}\nOldName => NewName\n")
+    terms.write_text(
+        f"# one term per line\n{TERM}\nOldName => NewName\n", encoding="utf-8"
+    )
     return tmp_path
 
 

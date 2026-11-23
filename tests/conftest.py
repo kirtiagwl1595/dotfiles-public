@@ -6,6 +6,9 @@ import subprocess
 
 import pytest
 
+# Fixtures for the loop tests; importing the module also puts claude/ and claude/hooks on sys.path
+from loop_fixtures import loop_env, machine_free_git  # noqa: F401
+
 
 def _forget_the_callers_repo():
     """A git hook (pre-push) exports GIT_DIR, GIT_INDEX_FILE and more.
