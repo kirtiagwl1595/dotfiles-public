@@ -8,6 +8,26 @@
       "name": "safe-lean",
       "source": "./",
       "description": "Guards that keep Claude out of secrets on macOS, Linux and Windows, and skills that cut token cost"
+    },
+    {
+      "name": "writing-skills",
+      "source": "./plugins/writing-skills",
+      "description": "Four writing skills: plain-language rules, doc and deck standards, an agent-porting manual"
+    },
+    {
+      "name": "ecc-picks",
+      "source": "./plugins/ecc-picks",
+      "description": "Picked ECC skill (eval-harness), MIT, pinned 2.2.3"
+    },
+    {
+      "name": "addy-picks",
+      "source": "./plugins/addy-picks",
+      "description": "Picked agent-skills skill (doubt-driven-development), MIT, pinned 301b02b, edited"
+    },
+    {
+      "name": "hf-picks",
+      "source": "./plugins/hf-picks",
+      "description": "Picked Hugging Face skill (hf-cli), Apache 2.0, pinned 25910b3; leave it disabled until needed"
     }
   ],
   "metadata": {

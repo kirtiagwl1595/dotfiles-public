@@ -12,7 +12,7 @@ This repo adds:
 - **Safe settings**: in default mode, Claude asks before every command outside the sandbox. Bypass mode is off. Auto mode is available with shift+tab; each session starts in default mode.
 - **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
 - **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
-- **Skills** in the same plugin: `setup-repo`, `token-report` and `ste-visual-first`. See "Skills".
+- **Skills** in the same plugin: `setup-repo`, `token-report` and more. See "Skills". The writing skills, including `ste-visual-first`, are in the optional `writing-skills` plugin.
 
 What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
@@ -107,7 +107,7 @@ The plugin brings these skills. In Claude Code, type the name with a `/`, or ask
 |---|---|
 | `/setup-repo` | Makes the current repo Claude-forward: a managed `.gitignore` block, `.claude/settings.json` (no Bash allow rules on Windows), a quiet pytest block, a project `CLAUDE.md`. It commits on `chore/claude-forward` and asks before push and PR. A team repo (its `origin` is not under your user name) gets only local, ignored files. Helpers: `claude/repo_setup.py`, `claude/forge.sh` (picks `gh` or `glab` from `origin`). |
 | `/token-report` | Your Claude Code token use and cost. |
-| `/ste-visual-first` | Picks a table or a diagram over long text. |
+| `/writing-skills:ste-visual-first` | Picks a table or a diagram over long text. It is in the optional `writing-skills` plugin: `claude plugin install writing-skills@dotfiles-public`. |
 
 `setup-repo` writes `.git/config` and `.claude/settings.json`, which the sandbox denies. Claude runs those single commands outside the sandbox, and each one asks you.
 

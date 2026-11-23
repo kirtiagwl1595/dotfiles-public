@@ -36,6 +36,15 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" guard_egm.py"
           }
         ]
+      },
+      {
+        "matcher": "Read|Edit|Write|MultiEdit|NotebookEdit|Grep|Glob|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" guard_loop.py"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -74,6 +83,15 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory churn_watch.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory loop_hook.py record"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -91,6 +109,10 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory notify.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory loop_hook.py stop"
           }
         ]
       }
@@ -101,6 +123,10 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory coach_prompt.py"
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/py.sh\" --advisory loop_hook.py prompt"
           }
         ]
       }

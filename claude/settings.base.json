@@ -159,6 +159,8 @@
       "Edit(~/.claude.json)",
       "Edit(~/.claude.json.backup*)",
       "Edit(~/.claude/backups/**)",
+      "Edit(~/git/**/.git/config)",
+      "Edit(~/git/**/.git/hooks/**)",
       "Edit(~/AppData/Local/Microsoft/Credentials/**)",
       "Edit(~/AppData/Roaming/Microsoft/Credentials/**)",
       "Edit(~/AppData/Roaming/Microsoft/Protect/**)",

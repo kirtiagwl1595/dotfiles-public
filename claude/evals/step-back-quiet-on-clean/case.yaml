@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: step-back-quiet-on-clean
+tags: [behaviour, trigger]
+context:
+  scaffold_script: scaffold.sh

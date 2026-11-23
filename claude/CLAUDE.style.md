@@ -14,4 +14,4 @@ Imported by `install.py`. Short, plain replies cost fewer output tokens and are 
   - Anything else: only when the user asks "explain more".
 - Short output still gets full checking. If you see a problem or a better option the user did not ask about, say it in 1 line. If the answer depends on something you did not check, say what you did not check.
 - A yes/no answer stays at max 3 sentences, risk line included.
-- Visuals: only when a diagram or table explains better than text (the `ste-visual-first` skill). In the terminal: a table, an ASCII diagram or Mermaid.
+- Visuals: only when a diagram or table explains better than text (the `writing-skills:ste-visual-first` skill, if you installed that plugin). In the terminal: a table, an ASCII diagram or Mermaid.

@@ -1,0 +1,8 @@
+{
+  "name": "addy-picks",
+  "version": "1.0.0",
+  "description": "Selected skill from addyosmani/agent-skills (commit 301b02b), MIT: doubt-driven-development, edited. Copied, not installed, to keep the per-session token cost small.",
+  "author": { "name": "Addy Osmani (agent-skills); picked for dotfiles-public" },
+  "homepage": "https://github.com/addyosmani/agent-skills",
+  "license": "MIT"
+}

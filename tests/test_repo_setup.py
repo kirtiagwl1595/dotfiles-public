@@ -195,7 +195,7 @@ def test_team_repos_are_skipped_in_a_folder_scan(repos, url, team):
     git(r, "remote", "add", "origin", url)
     _, out = run("plan", repos, FORGE_GIT_USER="me")
     assert ("remote-case: team repo" in out) == team
-    assert ("→ remote-case" in out) == (not team)
+    assert ("→ remote-case [" in out) == (not team)
 
 
 @pytest.mark.parametrize(
