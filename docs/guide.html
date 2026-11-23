@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.14" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Claude Code setup: user guide</title>
+  <style>
+
+span.smallcaps{font-variant: small-caps;}
+em, em em em, em em em em em {
+font-style: italic;
+}
+em em, em em em em {
+font-style: normal;
+}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+@media print {
+html {
+color-scheme: light only;
+}
+html, body, pre, code {
+background-color: transparent;
+}
+body, a, a:visited, blockquote {
+color: black;
+}
+pre, code {
+padding: 0;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+} </style>
+  <style type="text/css">
+:root {
+--bg: #fbfaf8; --fg: #1f2328; --muted: #59636e; --line: #d8dee4;
+--code-bg: #f1efe9; --accent: #3b5bdb; --th: #eceae4;
+}
+@media (prefers-color-scheme: dark) {
+:root {
+--bg: #16181d; --fg: #e6e6e6; --muted: #9aa4af; --line: #30363d;
+--code-bg: #1f232a; --accent: #8fa8ff; --th: #22262d;
+}
+}
+html { background: var(--bg); }
+body {
+max-width: 920px; margin: 0 auto; padding: 32px 16px 80px;
+font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+color: var(--fg); background: var(--bg);
+}
+h1, h2 { line-height: 1.25; }
+h1 { margin-top: 2.2em; padding-bottom: .3em; border-bottom: 1px solid var(--line); font-size: 1.6em; }
+h1.title { margin-top: 0; border: 0; font-size: 2em; }
+h2 { margin-top: 1.6em; font-size: 1.25em; }
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .88em; }
+code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto; line-height: 1.45; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: var(--th); }
+#TOC { border: 1px solid var(--line); border-radius: 8px; padding: 8px 20px; margin: 1.5em 0; }
+#TOC ul { padding-left: 1.2em; margin: .3em 0; }
+#TOC > ul > li { margin: .2em 0; }
+header p, .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Claude Code setup: user guide</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#your-folders" id="toc-your-folders">1. Your
+folders</a></li>
+<li><a href="#install-update-undo" id="toc-install-update-undo">2.
+Install, update, undo</a></li>
+<li><a href="#where-claude-code-reads-its-instructions" id="toc-where-claude-code-reads-its-instructions">3. Where Claude Code
+reads its instructions</a></li>
+<li><a href="#packages-and-shell" id="toc-packages-and-shell">4.
+Packages and shell</a>
+<ul>
+<li><a href="#packages" id="toc-packages">Packages</a></li>
+<li><a href="#shell-macos-and-linux-zsh" id="toc-shell-macos-and-linux-zsh">Shell: macOS and Linux (zsh)</a></li>
+<li><a href="#shell-windows-powershell" id="toc-shell-windows-powershell">Shell: Windows (PowerShell)</a></li>
+<li><a href="#git-defaults" id="toc-git-defaults">Git defaults</a></li>
+</ul></li>
+<li><a href="#start-a-project" id="toc-start-a-project">5. Start a
+project</a></li>
+<li><a href="#what-the-guards-do-for-you" id="toc-what-the-guards-do-for-you">6. What the guards do for you</a>
+<ul>
+<li><a href="#permission-modes" id="toc-permission-modes">Permission
+modes</a></li>
+</ul></li>
+<li><a href="#hooks-that-advise-or-that-you-switch-on" id="toc-hooks-that-advise-or-that-you-switch-on">7. Hooks that advise or
+that you switch on</a></li>
+<li><a href="#skills-and-plugins" id="toc-skills-and-plugins">8. Skills
+and plugins</a>
+<ul>
+<li><a href="#skills-in-safe-lean" id="toc-skills-in-safe-lean">Skills
+in <code>safe-lean</code></a></li>
+<li><a href="#optional-plugins" id="toc-optional-plugins">Optional
+plugins</a></li>
+</ul></li>
+<li><a href="#set-up-one-repo-or-many" id="toc-set-up-one-repo-or-many">9. Set up one repo or many</a></li>
+<li><a href="#stop-band-aid-code" id="toc-stop-band-aid-code">10. Stop
+band-aid code</a></li>
+<li><a href="#verified-improvement-loops" id="toc-verified-improvement-loops">11. Verified improvement
+loops</a></li>
+<li><a href="#the-status-line" id="toc-the-status-line">12. The status
+line</a></li>
+<li><a href="#save-tokens" id="toc-save-tokens">13. Save tokens</a></li>
+<li><a href="#secrets-and-evals" id="toc-secrets-and-evals">14. Secrets
+and evals</a>
+<ul>
+<li><a href="#secrets" id="toc-secrets">Secrets</a></li>
+<li><a href="#evals-advice-enforce-measure" id="toc-evals-advice-enforce-measure">Evals: advice, enforce,
+measure</a></li>
+</ul></li>
+<li><a href="#scripts" id="toc-scripts">15. Scripts</a></li>
+<li><a href="#run-the-tests-of-this-repo" id="toc-run-the-tests-of-this-repo">16. Run the tests of this
+repo</a></li>
+<li><a href="#more" id="toc-more">17. More</a></li>
+</ul>
+</nav>
+<p>How to work with this setup after the install: where files go, how
+Claude Code finds its rules, what the guards block, which skills you
+have, and which habits save tokens. For the install steps and the
+failure table, read the <a href="README.md">README</a>. For the design
+reasons, read <a href="docs/decisions.md">docs/decisions.md</a>. For
+setup notes and sandbox gotchas, read <a href="docs/SETUP.md">docs/SETUP.md</a>. For the loop engine, read <a href="docs/loop-engineering.md">docs/loop-engineering.md</a>.</p>
+<p>This guide has a web version, <code>docs/guide.html</code>. Rebuild
+it with <code>docs/build.sh</code> (needs <code>pandoc</code>; on
+Windows, run it in Git Bash).</p>
+<p>Which OS: every command below works on macOS, Linux and Windows,
+unless a line says otherwise. Three things are not for native Windows:
+zsh (use the PowerShell profile there), the sandbox, and the loop
+engine. WSL2 has all three: install Claude Code inside WSL2 to use them.
+On Windows, use PowerShell or Git Bash for the terminal commands.</p>
+<h1 id="your-folders">1. Your folders</h1>
+<pre><code>~ (home)             Windows: %USERPROFILE%
+├── git/                       all your code (a suggestion, not a rule)
+│   ├── dotfiles-public/       this repo (your clone)
+│   ├── &lt;project&gt;/             one repo = one project = one .venv
+│   └── _external/             other people&#39;s repos, read only
+├── .claude/                   Claude Code, user level
+│   ├── CLAUDE.md              your rules, plus the import lines from this repo
+│   ├── settings.json          your settings, plus the safe values from this repo
+│   └── plugins/               the safe-lean plugin and any optional plugin
+└── .config/claude/            small switch files for opt-in hooks, your private-terms list, loop profiles</code></pre>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Keep code in one folder, for example
+<code>~/git/&lt;project&gt;</code></td>
+<td>One place to search and back up</td>
+</tr>
+<tr>
+<td>One project = one git repo = one <code>.venv</code></td>
+<td>No clash between package versions</td>
+</tr>
+<tr>
+<td>Keep your clone of this repo in place</td>
+<td><code>~/.claude/CLAUDE.md</code> imports files from it by path. If
+you move it, run the install again.</td>
+</tr>
+<tr>
+<td>Never commit <code>.env</code> files, keys or raw data</td>
+<td><code>git/gitignore_global</code> blocks <code>.env</code>,
+<code>.venv/</code>, <code>CLAUDE.local.md</code> and
+<code>.claude/lessons/</code> in every repo</td>
+</tr>
+<tr>
+<td>Notebooks explore, <code>src/</code> keeps</td>
+<td>When notebook code works, move it to <code>src/</code> with a
+test</td>
+</tr>
+</tbody>
+</table>
+<h1 id="install-update-undo">2. Install, update, undo</h1>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Task</th>
+<th>macOS, Linux, Git Bash</th>
+<th>Windows PowerShell or Command Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See what would change</td>
+<td><code>./install.sh --check</code></td>
+<td><code>.\install.cmd --check</code></td>
+</tr>
+<tr>
+<td>Install</td>
+<td><code>./install.sh</code></td>
+<td><code>.\install.cmd</code></td>
+</tr>
+<tr>
+<td>Update after a <code>git pull</code></td>
+<td><code>./install.sh</code>, then restart Claude Code</td>
+<td><code>.\install.cmd</code>, then restart Claude Code</td>
+</tr>
+<tr>
+<td>Run one step</td>
+<td><code>./install.sh --only &lt;step&gt;</code></td>
+<td><code>.\install.cmd --only &lt;step&gt;</code></td>
+</tr>
+<tr>
+<td>Run <code>install.py</code> yourself</td>
+<td><code>python3 install.py --check</code></td>
+<td><code>py install.py --check</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>install.py</code> asks before each change, saves a
+<code>&lt;file&gt;.bak</code> copy first, and never removes your own
+values. Running it again changes nothing that is done. The options:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Option</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--check</code></td>
+<td>Shows what would change. Changes nothing.</td>
+</tr>
+<tr>
+<td><code>--only STEP</code></td>
+<td>Runs one step. You can repeat it.</td>
+</tr>
+<tr>
+<td><code>--skip-plugin</code></td>
+<td>Does not run <code>claude plugin ...</code></td>
+</tr>
+<tr>
+<td><code>--skip-tools</code></td>
+<td>Only reports the tools. Does not install them or change PATH.</td>
+</tr>
+<tr>
+<td><code>--profile NAME</code></td>
+<td>Package profile. Skips the menu.</td>
+</tr>
+<tr>
+<td><code>--manager brew\|apt\|winget</code></td>
+<td>Picks the package manager</td>
+</tr>
+<tr>
+<td><code>--yes-packages</code></td>
+<td>Answers yes to each package group</td>
+</tr>
+</tbody>
+</table>
+<p>The steps:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+<th>OS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools</code></td>
+<td>Checks <code>git</code>, <code>claude</code>, Git Bash and the
+sandbox tools; offers to install one</td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>rules</code></td>
+<td>Adds the import lines to <code>~/.claude/CLAUDE.md</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>settings</code></td>
+<td>Merges the safe settings into
+<code>~/.claude/settings.json</code></td>
+<td>all (the sandbox file: macOS and Linux)</td>
+</tr>
+<tr>
+<td><code>git</code></td>
+<td>Includes <code>git/config.shared</code> in
+<code>~/.gitconfig</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>plugin</code></td>
+<td>Installs or updates the <code>safe-lean</code> plugin</td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>delta</code></td>
+<td>Offers <code>git/config.delta</code> (the <code>delta</code> git
+pager)</td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>shell</code></td>
+<td>A zsh block in <code>~/.zshrc</code> and <code>~/.zprofile</code>;
+vim, starship and editorconfig; on Windows, the PowerShell profile</td>
+<td>zsh: macOS, Linux; profile: Windows</td>
+</tr>
+<tr>
+<td><code>statusline</code></td>
+<td>Offers <code>claude/statusline.sh</code> as your status line</td>
+<td>all (needs <code>jq</code>)</td>
+</tr>
+<tr>
+<td><code>templates</code></td>
+<td>Offers the <code>CLAUDE.about-me.example.md</code> and
+<code>CLAUDE.profile.example.md</code> copies in
+<code>~/.claude</code></td>
+<td>all</td>
+</tr>
+<tr>
+<td><code>macos</code></td>
+<td>Runs <code>scripts/macos-defaults.sh</code> after a question</td>
+<td>macOS only</td>
+</tr>
+<tr>
+<td><code>packages</code></td>
+<td>The package menu (section 4)</td>
+<td>all</td>
+</tr>
+</tbody>
+</table>
+<p>Details and the undo steps: <a href="README.md">README</a>.</p>
+<h1 id="where-claude-code-reads-its-instructions">3. Where Claude Code
+reads its instructions</h1>
+<p>Claude Code reads all these files and joins them. They add up; they
+do not replace each other.</p>
+<pre><code> Managed policy (IT, if any)   cannot be overridden
+        │
+ You, every project            ~/.claude/CLAUDE.md
+        │                        ├── @&lt;clone&gt;/claude/CLAUDE.md        shared rules (from this repo)
+        │                        ├── @&lt;clone&gt;/claude/CLAUDE.style.md  writing style (from this repo)
+        │                        ├── @~/.claude/CLAUDE.about-me.md    optional: about you
+        │                        └── @~/.claude/CLAUDE.profile.md     optional: about this computer
+        │                        your own text goes below these lines
+ This project, the team        &lt;project&gt;/CLAUDE.md      in git
+        │
+ This project, only you        &lt;project&gt;/CLAUDE.local.md   not in git
+        │
+ A sub-folder                  &lt;project&gt;/src/api/CLAUDE.md   loads when Claude works there</code></pre>
+<p>The two optional files come from the templates
+<code>claude/CLAUDE.about-me.example.md</code> and
+<code>claude/CLAUDE.profile.example.md</code>. The
+<code>templates</code> step copies each one to <code>~/.claude</code>.
+Fill in the <code>&lt;placeholder&gt;</code> values, then add the
+<code>@</code> import line to <code>~/.claude/CLAUDE.md</code>. The step
+never replaces a file you have.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>You want Claude to know</th>
+<th>Put it in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A rule for every project on your machine</td>
+<td>Your own text in <code>~/.claude/CLAUDE.md</code>, below the import
+lines</td>
+</tr>
+<tr>
+<td>Something about you</td>
+<td><code>~/.claude/CLAUDE.about-me.md</code></td>
+</tr>
+<tr>
+<td>Something about this computer (OS, shell, package manager)</td>
+<td><code>~/.claude/CLAUDE.profile.md</code></td>
+</tr>
+<tr>
+<td>How to run, test and lint one project</td>
+<td>That project’s <code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>A private note for one project, or your rules for a team repo</td>
+<td>That project’s <code>CLAUDE.local.md</code> (the global gitignore
+keeps it out of git)</td>
+</tr>
+<tr>
+<td>A rule for one folder</td>
+<td><code>src/api/CLAUDE.md</code>, or <code>.claude/rules/api.md</code>
+with a <code>paths:</code> line</td>
+</tr>
+<tr>
+<td>Lessons that Claude writes for you</td>
+<td><code>.claude/lessons/</code> in the repo (never in git)</td>
+</tr>
+</tbody>
+</table>
+<p>Commands and tips:</p>
+<ul>
+<li><code>/init</code> writes a first <code>CLAUDE.md</code> for a
+project by reading the code. Edit it after.</li>
+<li><code>/memory</code> shows which files are loaded and opens them. It
+also turns auto memory on or off.</li>
+<li>A line <code>@path/to/file</code> inside a CLAUDE.md imports that
+file.</li>
+<li>Keep each CLAUDE.md under about 200 lines. Short and specific rules
+work best.</li>
+<li>Settings stack the same way: <code>~/.claude/settings.json</code>
+(you), <code>.claude/settings.json</code> (project, in git),
+<code>.claude/settings.local.json</code> (project, only you).</li>
+<li>Instructions are advice. A guard (section 6) blocks what must never
+happen.</li>
+</ul>
+<h1 id="packages-and-shell">4. Packages and shell</h1>
+<h2 id="packages">Packages</h2>
+<p><code>packages/packages.json</code> is one list of tools. Each
+package has a <code>brew</code>, an <code>apt</code> and a
+<code>winget</code> name, or a note when an OS has none.</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Groups</th>
+<th>brew</th>
+<th>apt</th>
+<th>winget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minimal</code></td>
+<td>essentials</td>
+<td>5</td>
+<td>3</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>developer</code></td>
+<td>+ core-cli, shell, dev-checks, data-utils, fonts</td>
+<td>30</td>
+<td>19</td>
+<td>25</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>+ utilities, apps</td>
+<td>44</td>
+<td>25</td>
+<td>34</td>
+</tr>
+<tr>
+<td><code>work</code></td>
+<td><code>developer</code> + work-extras</td>
+<td>31</td>
+<td>19</td>
+<td>26</td>
+</tr>
+</tbody>
+</table>
+<ol type="1">
+<li>Run <code>./install.sh --only packages</code> (Windows:
+<code>.\install.cmd --only packages</code>).</li>
+<li>Pick a profile by number. <code>0</code> skips.</li>
+<li>Answer <code>y</code> or <code>N</code> for each group. Nothing
+installs before your <code>y</code>.</li>
+</ol>
+<p>Run <code>python3 install.py --only packages --check</code> (Windows:
+<code>py install.py --only packages --check</code>) to see the plan
+only.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python3 install.py pkg add &lt;name&gt;</code></td>
+<td>Installs one package and records it as a trial</td>
+</tr>
+<tr>
+<td><code>python3 install.py pkg keep &lt;name&gt;</code></td>
+<td>Moves a trial into your own list</td>
+</tr>
+<tr>
+<td><code>python3 install.py pkg list</code></td>
+<td>Shows trials and kept packages</td>
+</tr>
+<tr>
+<td><code>python3 install.py pkg brewfile &lt;profile&gt;</code></td>
+<td>Prints a Brewfile for <code>brew bundle</code></td>
+</tr>
+<tr>
+<td><code>python3 install.py pkg names</code></td>
+<td>Prints the names of one manager, for scripts</td>
+</tr>
+</tbody>
+</table>
+<p>Your trial list and your own list (<code>packages/trials.json</code>,
+<code>packages/local.json</code>) stay out of git. On Windows, use
+<code>py install.py pkg ...</code>. Some <code>apt</code> and
+<code>winget</code> names are not checked on a real machine:
+<code>scripts/check-package-names.sh brew|apt|winget</code> reports a
+name that the manager does not know (macOS, Linux, Git Bash).</p>
+<h2 id="shell-macos-and-linux-zsh">Shell: macOS and Linux (zsh)</h2>
+<p>The <code>shell</code> step adds a block
+<code># &gt;&gt;&gt; dotfiles-public zsh &gt;&gt;&gt;</code> to
+<code>~/.zshrc</code> and <code>~/.zprofile</code>. The block loads
+<code>shell/zsh/</code> from your clone. Your own lines stay. Every tool
+is optional: a missing tool skips its lines. Put your own extra lines in
+<code>~/.zshrc.local</code>.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Type</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>z &lt;part of a folder name&gt;</code></td>
+<td>Jumps to a folder that you used before (zoxide)</td>
+</tr>
+<tr>
+<td>Ctrl+R, Ctrl+T</td>
+<td>Fuzzy search of your history and of files (fzf)</td>
+</tr>
+<tr>
+<td><code>ll</code>, <code>la</code>, <code>lt</code></td>
+<td>Better <code>ls</code>: list, with hidden files, as a tree
+(eza)</td>
+</tr>
+<tr>
+<td><code>cat</code></td>
+<td><code>bat</code>: colours and line numbers</td>
+</tr>
+<tr>
+<td><code>lg</code></td>
+<td><code>lazygit</code>, git in a terminal UI</td>
+</tr>
+<tr>
+<td><code>gs</code></td>
+<td><code>git status -sb</code></td>
+</tr>
+<tr>
+<td><code>py</code>, <code>act</code>, <code>venv</code></td>
+<td><code>uv run python</code>, activate <code>.venv</code>, make a
+<code>.venv</code></td>
+</tr>
+<tr>
+<td><code>newproj &lt;dir&gt;</code></td>
+<td>A new uv project with a Jupyter kernel</td>
+</tr>
+<tr>
+<td><code>cw &lt;task&gt;</code></td>
+<td>Claude in its own git worktree and branch (parallel agents)</td>
+</tr>
+<tr>
+<td><code>pkgadd</code>, <code>pkgkeep</code>,
+<code>pkgtrials</code></td>
+<td>Shortcuts for <code>install.py pkg add</code>, <code>keep</code> and
+<code>list</code></td>
+</tr>
+<tr>
+<td><code>brewup</code>, <code>update_all</code></td>
+<td>Update Homebrew; update the OS, Homebrew and uv tools</td>
+</tr>
+<tr>
+<td><code>mkcd &lt;folder&gt;</code>,
+<code>extract &lt;file&gt;</code></td>
+<td>Make a folder and enter it; unpack any archive</td>
+</tr>
+</tbody>
+</table>
+<p><code>scripts/bench-shell.sh</code> times your login shell
+(<code>zsh -il -c exit</code>) and prints the median.</p>
+<h2 id="shell-windows-powershell">Shell: Windows (PowerShell)</h2>
+<p>The <code>shell</code> step copies
+<code>shell/powershell/Microsoft.PowerShell_profile.ps1</code> to the
+path that PowerShell reports in <code>$PROFILE</code>. It has the same
+ideas as the zsh block: <code>..</code>, <code>mkcd</code>,
+<code>gs</code>, <code>py</code>, <code>act</code>, <code>venv</code>,
+Up and Down history search, listing aliases, and <code>z</code> and the
+starship prompt when those tools exist. Put your own lines in
+<code>$HOME\.profile.local.ps1</code>.</p>
+<h2 id="git-defaults">Git defaults</h2>
+<p><code>git/config.shared</code> gives you: first branch
+<code>main</code>, rebase on pull, prune on fetch, a first
+<code>git push</code> that sets the upstream, and the aliases
+<code>git st</code> (short status), <code>git lg</code> (graph of the
+last 20 commits), <code>git last</code> (last commit with files) and
+<code>git unstage &lt;file&gt;</code> (undo <code>git add</code>). It
+sets no name, email or signing key. The <code>delta</code> step adds
+<code>git/config.delta</code> (colours and line numbers in diffs).</p>
+<h1 id="start-a-project">5. Start a project</h1>
+<p>Ask Claude: “start a new project called churn-model” (the
+<code>new-project</code> skill). It makes the folder, the uv project and
+<code>.venv</code>, a Jupyter kernel, the project template, the tests
+and the first commit. It asks before it creates a private repo on GitHub
+or GitLab.</p>
+<p>By hand, the same on all three OS:</p>
+<ol type="1">
+<li><code>mkdir ~/git/churn-model</code>, then
+<code>cd ~/git/churn-model</code>, then <code>git init</code>. (This
+works in bash, zsh and PowerShell.)</li>
+<li><code>uv init</code>, then <code>uv add pandas</code>.
+<code>uv</code> makes the <code>.venv</code>. In zsh,
+<code>newproj ~/git/churn-model</code> does steps 1 and 2 and adds a
+Jupyter kernel.</li>
+<li><code>claude</code>, then type <code>/setup-repo</code>.</li>
+</ol>
+<p>Install <code>uv</code> if you have none: it is in the
+<code>essentials</code> group of the packages for <code>brew</code> and
+<code>winget</code> (macOS <code>brew install uv</code>, Windows
+<code>winget install --id astral-sh.uv -e</code>). On Linux, use
+<code>brew</code> or the installer on the uv documentation page:
+<code>apt</code> has no <code>uv</code>.</p>
+<p>The project template (<code>claude/templates/project/</code>)
+gives:</p>
+<pre><code>&lt;project&gt;/
+├── CLAUDE.md                 project rules for Claude
+├── .claude/settings.json     project permissions
+├── .github/                  pull request template
+├── .pre-commit-config.yaml   ruff runs before each commit
+├── pyproject.toml, uv.lock   packages (uv add ...)
+├── src/                      code that is kept
+├── tests/                    pytest, with a smoke test
+├── evals/                    golden examples (section 14)
+├── notebooks/                Jupyter
+├── data/raw/                 input data (never committed)
+└── docs/                     doc rules, decisions.md, tests/test_docs.py</code></pre>
+<p>The daily loop:</p>
+<pre><code>git switch -c feature/clean-data     1. branch (never work on main)
+uv add pandas                        2. packages: uv add, never pip install
+uv run pytest -q                     3. test
+git commit -am &quot;Clean the data&quot;      4. commit
+git push -u origin HEAD              5. push (Claude asks you first)
+                                     6. open the PR (GitHub) or MR (GitLab)</code></pre>
+<p><code>gh pr create</code> opens a PR on GitHub.
+<code>glab mr create</code> opens an MR on GitLab. The
+<code>setup-repo</code> skill uses
+<code>claude/forge.sh pr-create</code>, which picks <code>gh</code> or
+<code>glab</code> from the <code>origin</code> remote.</p>
+<h1 id="what-the-guards-do-for-you">6. What the guards do for you</h1>
+<p>These guards run on every OS. They start through
+<code>claude/hooks/py.sh</code>, which finds a working Python 3.9 or
+later. Without one, a guard blocks the tool call; it never fails
+open.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>When Claude…</th>
+<th>Guard</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>runs any Bash or PowerShell command</td>
+<td><code>guard_bash</code></td>
+<td>Runs the Bash checks below in one process</td>
+</tr>
+<tr>
+<td>runs <code>pip install</code></td>
+<td><code>guard_pip</code></td>
+<td>Blocked. Says “use <code>uv add</code>”.</td>
+</tr>
+<tr>
+<td>commits, pushes or merges on <code>main</code></td>
+<td><code>guard_main_branch</code></td>
+<td>Blocked. Says “make a branch”.</td>
+</tr>
+<tr>
+<td>reads or writes SSH keys, cloud or git credentials, keychains,
+<code>.env</code> files or <code>~/Documents</code></td>
+<td><code>guard_secrets</code></td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>chains commands (<code>a &amp;&amp; b</code>, <code>$(...)</code>,
+<code>bash -c</code>)</td>
+<td><code>guard_compound</code></td>
+<td>Checks each part against the ask and deny rules. Outside the
+sandbox, denies a chain of steps that are not all allowed.</td>
+</tr>
+<tr>
+<td>writes a term from your own list into lessons, Claude memory or a
+<code>dotfiles</code> repo</td>
+<td><code>guard_private_terms</code></td>
+<td>Blocked. The list is
+<code>~/.config/claude/private-terms.txt</code>, one term per line. No
+file: no effect.</td>
+</tr>
+<tr>
+<td>runs a loop (section 11)</td>
+<td><code>guard_loop</code></td>
+<td>Denies writes outside the loop worktree, edits of tests and checks,
+agent git writes and PR creation. Acts only while a loop runs.</td>
+</tr>
+</tbody>
+</table>
+<p>Opt out of the main-branch guard for one repo:
+<code>git config claude.allowMain true</code>.</p>
+<p>The deny rules also stop Claude’s file tools from editing
+<code>.git/config</code> and <code>.git/hooks/</code>, in the current
+project and in every repo below <code>~/git</code>. A Git hook runs code
+on each commit, so this keeps Claude from planting one.
+<code>/setup-repo</code> writes the same rule for a repo in another
+folder (section 9).</p>
+<p>What each guard matches in detail: <a href="README.md">README</a>,
+section “What each guard blocks”.</p>
+<h2 id="permission-modes">Permission modes</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Where the command runs</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS, Linux: inside the sandbox</td>
+<td>Runs with no question</td>
+</tr>
+<tr>
+<td>macOS, Linux: outside the sandbox</td>
+<td>Claude asks you</td>
+</tr>
+<tr>
+<td>Windows, default mode</td>
+<td>Claude asks you for every command (no sandbox)</td>
+</tr>
+<tr>
+<td>Any OS: a command that matches an ask rule (<code>git push</code>,
+<code>rm</code>, <code>gh pr create</code>,
+<code>winget install</code>)</td>
+<td>Claude asks you</td>
+</tr>
+<tr>
+<td>Any OS: a command that a guard or a deny rule blocks</td>
+<td>Claude cannot run it</td>
+</tr>
+</tbody>
+</table>
+<p>Press Shift+Tab to change the mode: default, accept edits, plan mode
+and auto mode. Bypass mode is off. Each session starts in default
+mode.</p>
+<p>In auto mode, a classifier decides instead of you. Deny rules and
+guards still apply. On Windows, nothing else stands between Claude and
+the shell: use auto mode with care.</p>
+<h1 id="hooks-that-advise-or-that-you-switch-on">7. Hooks that advise or
+that you switch on</h1>
+<p>The advisory hooks start with <code>py.sh --advisory</code>: with no
+Python they do nothing, so they never block your prompts.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Hook</th>
+<th>What it does</th>
+<th>On by default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>coach_prompt</code></td>
+<td>A one-line tip when a prompt says “just quickly” or is very long, or
+when a disabled plugin of this repo fits your prompt</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>churn_watch</code></td>
+<td>Says when one file was edited many times in a session (a sign of
+patch-on-patch code); points to <code>/step-back</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>after_python_edit</code></td>
+<td>Runs <code>ruff format</code> and <code>ruff check</code> on an
+edited <code>.py</code> file, when <code>ruff</code> is installed</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>graphify_hint</code></td>
+<td>Points Claude to <code>graphify-out/</code> when a repo has a code
+graph</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>notify</code></td>
+<td>A desktop note when Claude finishes or waits (macOS, Linux
+<code>notify-send</code>, Windows toast)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>test_gate</code></td>
+<td>Runs the repo’s tests when Claude says it is done and
+<code>.py</code> files changed. It runs outside the sandbox.</td>
+<td>no: create <code>~/.config/claude/test-gate</code></td>
+</tr>
+<tr>
+<td><code>lesson_gate</code></td>
+<td>Asks once for a lesson file in <code>.claude/lessons/</code> after
+real work</td>
+<td>no: create <code>~/.config/claude/lesson-gate</code></td>
+</tr>
+<tr>
+<td><code>guard_live_checkout</code></td>
+<td>Blocks edits and file-changing git in a clone that you name as
+“live”</td>
+<td>no: list the folder in
+<code>~/.config/claude/live-checkout.txt</code></td>
+</tr>
+<tr>
+<td><code>guard_egm</code></td>
+<td>Asks before an EGM reviewer agent starts outside a run that you
+began. Acts only when an EGM plugin is installed.</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<p>An empty file is enough for <code>test-gate</code> and
+<code>lesson-gate</code>. To turn one off, delete the file. Windows: the
+folder is <code>%USERPROFILE%\.config\claude</code>.</p>
+<p><code>guard_live_checkout</code> is for a clone that you use as the
+live copy of your config. Claude then works in a worktree of that clone
+(<code>.claude/worktrees/</code>), and you deploy by merge and pull.</p>
+<h1 id="skills-and-plugins">8. Skills and plugins</h1>
+<h2 id="skills-in-safe-lean">Skills in <code>safe-lean</code></h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Skill</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/setup-repo</code></td>
+<td>Makes the current repo Claude-forward on branch
+<code>chore/claude-forward</code>. Asks before push and PR. A team repo
+gets only local, ignored files.</td>
+</tr>
+<tr>
+<td><code>/new-project</code></td>
+<td>A new Python project (section 5)</td>
+</tr>
+<tr>
+<td><code>/token-report</code></td>
+<td>Your Claude Code token use and cost: today, the last 7 days, and
+each session</td>
+</tr>
+<tr>
+<td><code>/staff-engineer</code></td>
+<td>For a feature or a multi-file change: read first, two options, the
+tests, the failure modes, then code</td>
+</tr>
+<tr>
+<td><code>/step-back</code></td>
+<td>Stops patch-on-patch code: writes one general rule, rewrites to it,
+deletes the patches, folds the tests into one table</td>
+</tr>
+<tr>
+<td><code>/slop-audit</code></td>
+<td>Audits an existing repo for patch-on-patch code and slop; ranks the
+hot spots; fixes only the findings you pick</td>
+</tr>
+<tr>
+<td><code>/rdf-check</code></td>
+<td>Validates RDF files and runs SPARQL with Apache Jena. Install Jena:
+<code>scripts/install-jena.sh</code> (Windows:
+<code>scripts/install-jena.ps1</code>).</td>
+</tr>
+<tr>
+<td><code>/loop-engineer</code>, <code>/loop-audit</code>,
+<code>/loop-approve</code></td>
+<td>The loop engine (section 11). You type these; Claude does not start
+them.</td>
+</tr>
+</tbody>
+</table>
+<p>The full names have the plugin first:
+<code>/safe-lean:setup-repo</code>,
+<code>/safe-lean:loop-engineer</code> and so on. Type <code>/</code> to
+see all skills. Say the task in your own words, and Claude loads the
+matching skill.</p>
+<h2 id="optional-plugins">Optional plugins</h2>
+<p>Each plugin adds its skill descriptions to every session, so install
+only what you use. Install one with
+<code>claude plugin install &lt;name&gt;@dotfiles-public</code>.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Plugin</th>
+<th>Skills</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>writing-skills</code></td>
+<td><code>ste-visual-first</code>, <code>technical-doc-standards</code>,
+<code>winston-presentations</code>,
+<code>fable-agent-patterns</code></td>
+<td>This repo’s own writing skills</td>
+</tr>
+<tr>
+<td><code>anthropic-skills</code></td>
+<td><code>docx</code>, <code>pdf</code>, <code>pptx</code>,
+<code>xlsx</code>, <code>skill-creator</code></td>
+<td>By Anthropic, unmodified, Apache 2.0. For Claude Code users who do
+not get these skills from claude.ai.</td>
+</tr>
+<tr>
+<td><code>addy-picks</code></td>
+<td><code>doubt-driven-development</code></td>
+<td>A fresh-context adversarial review of code and decisions during
+work. MIT.</td>
+</tr>
+<tr>
+<td><code>ecc-picks</code></td>
+<td><code>eval-harness</code></td>
+<td>Helps design bigger eval suites. MIT.</td>
+</tr>
+<tr>
+<td><code>hf-picks</code></td>
+<td><code>hf-cli</code></td>
+<td>The Hugging Face <code>hf</code> command. Leave it disabled until
+you need it. Apache 2.0.</td>
+</tr>
+</tbody>
+</table>
+<p>For the Hugging Face skill: do not use <code>hf auth login</code>,
+because it saves the token as plain text, and the deny rules block it.
+Keep the token in your OS keychain or password manager, and run commands
+that need it yourself, in your own terminal. Commands that publish or
+cost money ask first.</p>
+<h1 id="set-up-one-repo-or-many">9. Set up one repo or many</h1>
+<p><code>/setup-repo</code> runs <code>claude/repo_setup.py</code>. You
+can run it yourself through the same launcher the guards use. The
+launcher finds a working Python on every OS. Run these from the root of
+your clone:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bash claude/hooks/py.sh ../repo_setup.py plan &lt;repo-or-folder&gt;</code></td>
+<td>Report only. Changes nothing.</td>
+</tr>
+<tr>
+<td><code>bash claude/hooks/py.sh ../repo_setup.py apply &lt;repo-or-folder&gt;</code></td>
+<td>Makes the changes and commits them on
+<code>chore/claude-forward</code>. Never pushes.</td>
+</tr>
+<tr>
+<td><code>bash claude/hooks/py.sh ../repo_setup.py apply &lt;repo-or-folder&gt; --untrack</code></td>
+<td>Also runs <code>git rm --cached</code> on tracked personal or secret
+files. The files stay on disk.</td>
+</tr>
+<tr>
+<td><code>bash claude/hooks/py.sh ../repo_setup.py team &lt;repo&gt;</code></td>
+<td>Prints the team owner (exit 0) for a team repo, nothing (exit 1) for
+your own repo</td>
+</tr>
+<tr>
+<td><code>bash claude/hooks/py.sh ../repo_setup.py protect &lt;repo&gt;</code></td>
+<td>Locks <code>.git/hooks</code> and <code>.git/config</code> for
+Claude in a repo outside <code>~/git</code>, in the ignored
+<code>.claude/settings.local.json</code> of the main checkout. No
+commit.</td>
+</tr>
+</tbody>
+</table>
+<p>On Windows, run these in Git Bash. A folder of repos works too: it
+sets up each repo under it.</p>
+<ul>
+<li>The setup is judged and built from the default branch
+(<code>origin/HEAD</code>, else <code>main</code> or
+<code>master</code>), whatever is checked out. Your checkout is never
+switched.</li>
+<li>A repo with uncommitted work is skipped.</li>
+<li>A setup branch with an older setup, or built on other work, shows as
+stale. Do not merge a stale branch as setup. The tool never deletes or
+rewrites it.</li>
+<li>It never pushes.</li>
+</ul>
+<p><code>forge.sh</code> is one helper for GitHub and GitLab:
+<code>bash claude/forge.sh kind</code>, <code>auth-check</code>,
+<code>whoami</code> and <code>pr-create</code>. It reads the host from
+the <code>origin</code> URL, never targets <code>upstream</code>, and
+needs no Python. Add <code>--dry-run</code> as the first argument to
+print the command instead of running it.</p>
+<h1 id="stop-band-aid-code">10. Stop band-aid code</h1>
+<p>A band-aid is a special case that makes one reported input work: a
+third <code>if</code>, a third test, all green. It passes its own test,
+so a failing test never stops it. These layers watch for signals that a
+band-aid cannot hide:</p>
+<pre><code> write time   CLAUDE.md rule: before a 2nd special case on one idea ─┐
+ edit time    churn_watch hook: many edits of one file              ─┼─► /step-back
+ you          &quot;band-aid&quot;, &quot;hack&quot;, &quot;step back&quot;                       ─┘     1. write the one rule for all cases
+                                                                           2. two designs, pick one
+ after        /slop-audit ──► report ──► fix one finding per branch        3. rewrite, delete the patches
+                                                                           4. fold tests into one table, keep every row</code></pre>
+<p>Clean an existing repo:</p>
+<ol type="1">
+<li>Open Claude in the repo and type <code>/slop-audit</code>. It runs
+only read commands and writes a report in <code>.claude/audits/</code>
+(never committed).</li>
+<li>Pick 1 to 3 findings from the report. Start with a file that is
+changed often and is complex.</li>
+<li>Claude fixes each finding on its own branch. Tests that pin today’s
+behavior come first, then the <code>/step-back</code> steps.</li>
+</ol>
+<p><code>churn_watch</code> sees only Edit, Write and MultiEdit calls. A
+file changed through Bash does not count.</p>
+<h1 id="verified-improvement-loops">11. Verified improvement loops</h1>
+<p>A loop improves one target (a script, a skill or a repo task) in its
+own git worktree. Claude does the work. Hooks run the checks after each
+try, keep a gain, revert a loss, and stop at success, at the cap, when
+nothing improves, or at 90 percent of your usage limit. You approve the
+result.</p>
+<pre><code> you: /safe-lean:loop-audit                          ──► ranked list of what has no verifier
+ you: /safe-lean:loop-engineer script scripts/bench-shell.sh   ──► worktree, checks, .loop/LOOP.md
+ you: /safe-lean:loop-engineer confirm               ──► branch loop/&lt;slug&gt;, setup commit
+      each turn: cause ──► edit ──► verify ──► Stop hook: keep (commit) or revert
+      ends: checks pass, the cap, 2 turns with no gain, or the usage limit ──► bundle
+ you: read .loop/bundle.md and decide (the loop never pushes)
+ you: /safe-lean:loop-approve &lt;slug&gt;                 ──► branch feature/loop-&lt;slug&gt;, bundle and lesson copied</code></pre>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Fact</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Platforms</td>
+<td>macOS, Linux and WSL2. On native Windows the loop hooks do nothing
+and normal work is never blocked.</td>
+</tr>
+<tr>
+<td>Targets</td>
+<td><code>script &lt;path&gt;</code>, <code>task &quot;&lt;goal&gt;&quot;</code>
+or <code>skill &lt;name&gt;</code></td>
+</tr>
+<tr>
+<td>Stop</td>
+<td><code>/safe-lean:loop-engineer stop</code></td>
+</tr>
+<tr>
+<td>Allow one more file</td>
+<td><code>/safe-lean:loop-engineer allow &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td>Locked during a loop</td>
+<td>Tests, checks, lint config and the loop spec
+(<code>guard_loop</code>)</td>
+</tr>
+<tr>
+<td>Output</td>
+<td><code>.loop/bundle.md</code> in the loop worktree. Never create
+<code>.loop/</code> by hand.</td>
+</tr>
+<tr>
+<td>Profiles</td>
+<td>A repo gets the work profile unless a rule maps it to personal. Put
+your rules in
+<code>~/.config/claude/loop-profiles.local.json</code>.</td>
+</tr>
+<tr>
+<td>Agents</td>
+<td><code>loop-diagnoser</code> (finds causes),
+<code>loop-log-reader</code> (returns only the failures of a long
+command), <code>loop-reviewer</code> (answers three review questions
+once for each bundle)</td>
+</tr>
+<tr>
+<td>Usage stop</td>
+<td>Needs a status line script that writes <code>rate_limits.json</code>
+to the loop state folder. This repo’s <code>claude/statusline.sh</code>
+does not write it, so the usage stop is off and the bundle says so.</td>
+</tr>
+</tbody>
+</table>
+<p>Run a loop in the work profile in manual or accept-edits mode, not
+auto mode. Design, rules and file formats: <a href="docs/loop-engineering.md">docs/loop-engineering.md</a>.</p>
+<h1 id="the-status-line">12. The status line</h1>
+<p>The <code>statusline</code> step offers
+<code>claude/statusline.sh</code> as your status line. It shows
+<code>model · ctx 34% · branch ✘2 · $0.42 · cache 91%</code>: the model,
+the context used, the branch and the count of uncommitted files, the
+session cost and the prompt-cache hits. It needs <code>jq</code>;
+without it, it prints only <code>Claude</code>. It works in Git Bash on
+Windows.</p>
+<h1 id="save-tokens">13. Save tokens</h1>
+<p>Quality first: pick a strong model for hard work. Cut only waste.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Habit</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/clear</code> between unrelated tasks</td>
+<td>Old context goes with every message</td>
+</tr>
+<tr>
+<td><code>/compact focus on X</code> when the context is large</td>
+<td>Keeps what matters, drops the rest</td>
+</tr>
+<tr>
+<td><code>/context</code>, <code>/usage</code>, <code>/cost</code></td>
+<td>See where tokens go</td>
+</tr>
+<tr>
+<td>Specific prompts (“add a test for <code>load_sales</code> in
+<code>src/io.py</code>”)</td>
+<td>A vague prompt makes Claude read many files</td>
+</tr>
+<tr>
+<td>Plan mode for big work; Esc early and <code>/rewind</code> when it
+goes wrong</td>
+<td>No expensive wrong turns</td>
+</tr>
+<tr>
+<td><code>graphify query &quot;...&quot;</code> before broad reading, in a repo
+that has <code>graphify-out/</code></td>
+<td>The graph answers without opening files</td>
+</tr>
+<tr>
+<td>Quiet pytest (<code>-q --tb=short</code>, which
+<code>/setup-repo</code> sets for uv projects)</td>
+<td>Test logs are big</td>
+</tr>
+<tr>
+<td><code>/token-report</code> each week</td>
+<td>Today, the week, each session</td>
+</tr>
+</tbody>
+</table>
+<p><code>graphify</code> is an optional third-party tool. This repo does
+not install it. The setup sets the subagent model to <code>sonnet</code>
+(<code>CLAUDE_CODE_SUBAGENT_MODEL</code> in
+<code>claude/settings.base.json</code>); your own
+<code>~/.claude/settings.json</code> wins if you set another.</p>
+<h1 id="secrets-and-evals">14. Secrets and evals</h1>
+<h2 id="secrets">Secrets</h2>
+<p>Keep keys out of <code>.env</code> files in git and out of chat. The
+guards block Claude from the places where an OS keeps secrets:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>OS</th>
+<th>Where keys can live</th>
+<th>Claude cannot run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS</td>
+<td>Keychain</td>
+<td><code>security find-generic-password -w</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td>A keyring</td>
+<td><code>secret-tool lookup</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Credential Manager</td>
+<td><code>cmdkey</code>, <code>vaultcmd</code>,
+<code>Get-StoredCredential</code></td>
+</tr>
+</tbody>
+</table>
+<ol type="1">
+<li>Store a key with your OS tool or a password manager, in your own
+terminal.</li>
+<li>Export the key in your own terminal, for example
+<code>export ANTHROPIC_API_KEY=...</code> (PowerShell:
+<code>$env:ANTHROPIC_API_KEY = &quot;...&quot;</code>). Then run the command that
+needs it.</li>
+<li>If Claude needs to know which variables exist, give it only the
+names.</li>
+</ol>
+<p>In the sandbox (macOS, Linux), the variables <code>GH_TOKEN</code>,
+<code>GITHUB_TOKEN</code>, <code>GITLAB_TOKEN</code>,
+<code>ANTHROPIC_API_KEY</code>, the AWS keys and <code>HF_TOKEN</code>
+are hidden from every command.</p>
+<h2 id="evals-advice-enforce-measure">Evals: advice, enforce,
+measure</h2>
+<pre><code> CLAUDE.md and skills  = advice    (Claude should ...)
+ guards and deny rules = enforce   (Claude cannot ...)
+ evals                 = measure   (does it work, and does the plugin help?)</code></pre>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Evals for</th>
+<th>Where</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>This plugin (does a skill fire on normal words? no skill for a plain
+question? tests before a commit? team repos stay local?)</td>
+<td><code>claude/evals/</code></td>
+<td><code>claude/evals/run.sh</code> (macOS, Linux, WSL2). It costs
+model calls on your plan; try
+<code>claude/evals/run.sh --case no-skill-for-questions --runs 1 --ablation none</code>
+first.</td>
+</tr>
+<tr>
+<td>Your projects (is the output still right?)</td>
+<td><code>evals/cases.jsonl</code> in each new project</td>
+<td><code>uv run pytest -m eval</code></td>
+</tr>
+</tbody>
+</table>
+<p>Plain <code>pytest</code> skips project evals, so they never spend
+tokens by accident. Each line of <code>cases.jsonl</code> holds
+<code>input</code> and <code>expected</code>, or a <code>criteria</code>
+line for an LLM judge (needs <code>uv add --dev anthropic</code> and
+<code>ANTHROPIC_API_KEY</code> in your environment).</p>
+<h1 id="scripts">15. Scripts</h1>
+<p>All scripts are in <code>scripts/</code>. Run them from the root of
+your clone.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Script</th>
+<th>Does</th>
+<th>OS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scripts/make-bundle.sh</code></td>
+<td>Packs the repo into one file to carry to another computer</td>
+<td>macOS, Linux, Git Bash</td>
+</tr>
+<tr>
+<td><code>scripts/import-bundle.sh</code></td>
+<td>Applies such a bundle (fast-forward <code>main</code>). It asks
+first and never merges or resets.</td>
+<td>macOS, Linux, Git Bash</td>
+</tr>
+<tr>
+<td><code>scripts/backup-home.sh &lt;folder&gt;</code></td>
+<td>An encrypted archive of your home folder, with <code>age</code>,
+before big changes</td>
+<td>macOS, Linux</td>
+</tr>
+<tr>
+<td><code>scripts/macos-defaults.sh</code></td>
+<td>User-level macOS settings. It saves the old values first.
+<code>install.py --only macos</code> runs it.</td>
+<td>macOS only</td>
+</tr>
+<tr>
+<td><code>scripts/install-jena.sh</code>,
+<code>scripts/install-jena.ps1</code></td>
+<td>Apache Jena for <code>/rdf-check</code></td>
+<td>macOS, Linux; Windows</td>
+</tr>
+<tr>
+<td><code>scripts/skill-zip.sh &lt;skill&gt;</code></td>
+<td>Packs one skill into a zip to upload to claude.ai</td>
+<td>all (Python)</td>
+</tr>
+<tr>
+<td><code>scripts/check-package-names.sh &lt;manager&gt;</code></td>
+<td>Reports package names that a manager does not know</td>
+<td>macOS, Linux, Git Bash</td>
+</tr>
+<tr>
+<td><code>scripts/bench-shell.sh</code></td>
+<td>Times your login zsh</td>
+<td>macOS, Linux</td>
+</tr>
+<tr>
+<td><code>scripts/ci-local.sh</code></td>
+<td>Runs the checks of the CI workflow on your computer, before you
+push</td>
+<td>macOS, Linux, Git Bash</td>
+</tr>
+</tbody>
+</table>
+<h1 id="run-the-tests-of-this-repo">16. Run the tests of this repo</h1>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Task</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tests</td>
+<td><code>uv run --no-project --with pytest pytest -q tests</code></td>
+</tr>
+<tr>
+<td>Lint and format check</td>
+<td><code>uvx ruff@0.17.2 check .</code> and
+<code>uvx ruff@0.17.2 format --check .</code></td>
+</tr>
+<tr>
+<td>Both, as CI does</td>
+<td><code>scripts/ci-local.sh</code></td>
+</tr>
+</tbody>
+</table>
+<p>Change a guard: write a test first, run the tests, raise
+<code>version</code> in <code>claude/.claude-plugin/plugin.json</code>,
+add a dated section to <code>CHANGELOG.md</code>, commit, then run
+<code>claude plugin update safe-lean@dotfiles-public</code>. Claude Code
+copies a plugin once for each version: without a version change, the old
+guards keep running.</p>
+<h1 id="more">17. More</h1>
+<ul>
+<li>Install steps, failure table and undo: <a href="README.md">README</a></li>
+<li>Setup notes and sandbox gotchas: <a href="docs/SETUP.md">docs/SETUP.md</a></li>
+<li>Design decisions: <a href="docs/decisions.md">docs/decisions.md</a></li>
+<li>The loop engine: <a href="docs/loop-engineering.md">docs/loop-engineering.md</a></li>
+<li>What changed in each version: <a href="CHANGELOG.md">CHANGELOG.md</a></li>
+<li>Claude Code docs: <a href="https://code.claude.com/docs" class="uri">https://code.claude.com/docs</a></li>
+</ul>
+</body>
+</html>

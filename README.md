@@ -17,7 +17,7 @@ This repo adds:
 - **Optional plugins**: `writing-skills`, `anthropic-skills` (docx, pdf, pptx, xlsx, skill-creator) and 3 picked third-party skills. See "Optional plugins".
 - **Machine setup** (each step asks): packages from one list for `brew`, `apt` and `winget`, shell config (zsh, or a PowerShell profile on Windows), git `delta`, a status line. See "Packages and shell".
 
-What changed in each version: [CHANGELOG.md](CHANGELOG.md).
+What changed in each version: [CHANGELOG.md](CHANGELOG.md). The full user guide: [GUIDE.md](GUIDE.md) (HTML: `docs/build.sh` writes `docs/guide.html`). Setup notes and sandbox gotchas: [docs/SETUP.md](docs/SETUP.md). Design decisions: [docs/decisions.md](docs/decisions.md).
 
 The install adds to your setup. It never removes your own values. It asks before it replaces a weaker safety value, before it changes PATH, and before it installs a tool.
 

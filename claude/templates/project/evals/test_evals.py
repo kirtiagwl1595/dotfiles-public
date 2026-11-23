@@ -4,7 +4,8 @@ Run:  uv run pytest -m eval        (plain `pytest` skips these, so the test gate
 Each line of cases.jsonl: {"input": ..., "expected": ...}
   "match": "exact" (default) or "contains"
   "criteria": "PASS if ..." -> an LLM judge grades instead (needs `uv add --dev anthropic` and
-              ANTHROPIC_API_KEY, e.g. ANTHROPIC_API_KEY=$(secret get ANTHROPIC_API_KEY) uv run pytest -m eval)
+              ANTHROPIC_API_KEY: export it in your own terminal from your OS keychain or password
+              manager, then run `uv run pytest -m eval`)
 """
 
 import functools

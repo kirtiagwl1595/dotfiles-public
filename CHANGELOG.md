@@ -20,6 +20,7 @@ To update: `git pull`, then `./install.sh` (Windows: `.\install.cmd`), then rest
 - The project template gets `.claude/`, `.github/`, a pre-commit config, `src/`, `data/`, `notebooks/` and a smoke test.
 - Deny rules: Claude's file tools do not edit `.git/config` or `.git/hooks/` (in the current project and below `~/git`). Ask rules: `gh pr checkout`, `gh repo sync`, `glab mr checkout`.
 - A test fails on any private plugin name in the repo.
+- `GUIDE.md` (with `docs/guide.html`, built by `docs/build.sh` with pandoc), `docs/SETUP.md`, `docs/decisions.md` (D1 to D24). `tests/test_docs.py` checks that each option, step, path, skill and link named in the docs exists.
 
 ### Changed
 - `guard_secrets` uses one table of protected roots for file tools, shell words and globs. PowerShell writers (`Set-Content`, `Out-File`, `Add-Content`) count as writes.
