@@ -22,7 +22,7 @@ def home(tmp_path):
     live, other = tmp_path / "clone", tmp_path / "other"
     for repo in (live, other):
         (repo / "src").mkdir(parents=True)
-        (repo / "src" / "a.txt").write_text("a\n")
+        (repo / "src" / "a.txt").write_text("a\n", encoding="utf-8")
         git(repo, "init", "-q", "-b", "work")
         git(repo, "config", "user.name", "t")
         git(repo, "config", "user.email", "t@example.com")
@@ -31,7 +31,9 @@ def home(tmp_path):
     git(live, "worktree", "add", "-q", "-b", "wt", ".claude/worktrees/wt")
     config = tmp_path / ".config" / "claude"
     config.mkdir(parents=True)
-    (config / "live-checkout.txt").write_text(f"# the live copy\n{live}\n")
+    (config / "live-checkout.txt").write_text(
+        f"# the live copy\n{live}\n", encoding="utf-8"
+    )
     return tmp_path
 
 

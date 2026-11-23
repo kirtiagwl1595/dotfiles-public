@@ -37,8 +37,8 @@ def state(env):
 
 def evidence(env, exits):
     wt = env.wt
-    spec = _loop.split_spec((wt / ".loop/LOOP.md").read_text())[0]
-    feats = json.loads((wt / ".loop/loop-features.json").read_text())
+    spec = _loop.split_spec((wt / ".loop/LOOP.md").read_text(encoding="utf-8"))[0]
+    feats = json.loads((wt / ".loop/loop-features.json").read_text(encoding="utf-8"))
     ev = {
         "content": _loop.content_hash(wt),
         "spec_sha": _loop.sha(spec),
@@ -64,9 +64,9 @@ def baseline(env, exits=(1, 0)):
 def iterate(env, n, exits, text="echo ok\n"):
     """One agent turn: cause and decision, an edit, a verify run."""
     progress = env.wt / ".loop/loop-progress.md"
-    old = progress.read_text() if progress.exists() else ""
-    progress.write_text(old + PROGRESS.format(n=n))
-    (env.wt / "tool.sh").write_text(text)
+    old = progress.read_text(encoding="utf-8") if progress.exists() else ""
+    progress.write_text(old + PROGRESS.format(n=n), encoding="utf-8")
+    (env.wt / "tool.sh").write_text(text, encoding="utf-8")
     record(env, evidence(env, exits))
 
 
@@ -92,7 +92,10 @@ def test_confirm_creates_the_loop(loop_env):
     assert s["bin_sha"] == _loop.bin_sha(wt)
     assert s["base_content"] == _loop.content_hash(wt)
     assert "keep.txt" in s["scope_protected"]
-    assert json.loads((wt / ".loop/run.json").read_text())["base"] == s["base"]
+    assert (
+        json.loads((wt / ".loop/run.json").read_text(encoding="utf-8"))["base"]
+        == s["base"]
+    )
     assert VERIFY in context(out)
     # .loop/ is never committed
     assert ".loop" not in git(wt, "show", "--name-only", "--format=", "HEAD")
@@ -129,11 +132,11 @@ def test_confirm_refuses_a_symlinked_loop_folder(loop_env):
     write_loop_files(staging)
     (staging / ".loop").rename(outside)
     (outside / "bin").mkdir()
-    (outside / "bin/keep.txt").write_text("user file\n")
+    (outside / "bin/keep.txt").write_text("user file\n", encoding="utf-8")
     (loop_env.wt / ".loop").symlink_to(outside)
     _, out, _ = prompt(loop_env, f"{CMD} confirm")
     assert blocked(out) and "symlink" in out["reason"], out
-    assert (outside / "bin/keep.txt").read_text() == "user file\n"
+    assert (outside / "bin/keep.txt").read_text(encoding="utf-8") == "user file\n"
     assert git(loop_env.wt, "symbolic-ref", "--short", "HEAD") == "worktree-demo"
 
 
@@ -141,13 +144,15 @@ def test_stop_never_writes_through_a_planted_symlink(loop_env):
     # The sandboxed agent runs `ln -s ~/.zshrc .loop/LOOP.md.tmp`; Stop rewrites the mirrors
     baseline(loop_env)
     outside = loop_env.tmp / "zshrc"
-    outside.write_text("user file\n")
+    outside.write_text("user file\n", encoding="utf-8")
     for name in ("LOOP.md.tmp", "loop-features.json.tmp", "run.json.tmp"):
         (loop_env.wt / ".loop" / name).symlink_to(outside)
-    (loop_env.wt / ".loop/LOOP.md").write_text("tampered\n")  # Stop row 5 restores it
+    (loop_env.wt / ".loop/LOOP.md").write_text(
+        "tampered\n", encoding="utf-8"
+    )  # Stop row 5 restores it
     stop(loop_env)
-    assert outside.read_text() == "user file\n"
-    assert "tampered" not in (loop_env.wt / ".loop/LOOP.md").read_text()
+    assert outside.read_text(encoding="utf-8") == "user file\n"
+    assert "tampered" not in (loop_env.wt / ".loop/LOOP.md").read_text(encoding="utf-8")
 
 
 def test_stop_refuses_a_loop_folder_swapped_for_a_symlink(loop_env):
@@ -155,9 +160,9 @@ def test_stop_refuses_a_loop_folder_swapped_for_a_symlink(loop_env):
     outside = loop_env.tmp / "outside"
     (loop_env.wt / ".loop").rename(outside)
     (loop_env.wt / ".loop").symlink_to(outside)
-    (outside / "LOOP.md").write_text("tampered\n")
+    (outside / "LOOP.md").write_text("tampered\n", encoding="utf-8")
     out = stop(loop_env)
-    assert (outside / "LOOP.md").read_text() == "tampered\n"
+    assert (outside / "LOOP.md").read_text(encoding="utf-8") == "tampered\n"
     assert "symlink" in out.get("systemMessage", ""), out
 
 
@@ -214,7 +219,7 @@ def test_allow_and_stop(loop_env):
     confirm(loop_env)
     prompt(loop_env, f"{CMD} allow tests/test_tool.py")
     assert state(loop_env)["approved_paths"] == ["tests/test_tool.py"]
-    run = json.loads((loop_env.wt / ".loop/run.json").read_text())
+    run = json.loads((loop_env.wt / ".loop/run.json").read_text(encoding="utf-8"))
     assert run["approved_paths"] == ["tests/test_tool.py"]
     prompt(loop_env, f"{CMD} stop")
     assert state(loop_env)["stop_requested"] is True
@@ -250,9 +255,9 @@ def test_record_ignores_evidence_it_cannot_trust(loop_env, change):
     elif change == "other session":
         kwargs["sid"] = "s2"
     elif change == "bin changed":
-        (loop_env.wt / ".loop/bin/json.py").write_text("x")
+        (loop_env.wt / ".loop/bin/json.py").write_text("x", encoding="utf-8")
     else:
-        (loop_env.wt / "tool.sh").write_text("echo ok\n")
+        (loop_env.wt / "tool.sh").write_text("echo ok\n", encoding="utf-8")
     record(loop_env, stdout, **kwargs)
     assert state(loop_env)["baseline"] == {}
 
@@ -299,7 +304,9 @@ def test_row2_done_allows(loop_env):
 def test_row3_bundle_incomplete_blocks_then_gives_up(loop_env):
     baseline(loop_env)
     edit_state(loop_env, status="bundling")
-    (loop_env.wt / ".loop/bundle.md").write_text("## Goal and cause\nx\n")
+    (loop_env.wt / ".loop/bundle.md").write_text(
+        "## Goal and cause\nx\n", encoding="utf-8"
+    )
     for _ in range(2):
         out = stop(loop_env)
         assert blocked(out) and "Debrief" in out["reason"]
@@ -311,7 +318,7 @@ def test_row3_complete_bundle_is_done(loop_env):
     baseline(loop_env)
     edit_state(loop_env, status="bundling")
     text = "".join(f"## {s}\nx\n" for s in _loop.BUNDLE_SECTIONS)
-    (loop_env.wt / ".loop/bundle.md").write_text(text)
+    (loop_env.wt / ".loop/bundle.md").write_text(text, encoding="utf-8")
     assert not blocked(stop(loop_env))
     assert state(loop_env)["status"] == "done"
 
@@ -327,16 +334,16 @@ def test_row4_stuck_goes_to_bundling(loop_env):
 def test_row5_mirror_is_restored(loop_env):
     baseline(loop_env)
     feats = loop_env.wt / ".loop/loop-features.json"
-    feats.write_text(json.dumps([{**FEATURES[0], "passes": True}]))
+    feats.write_text(json.dumps([{**FEATURES[0], "passes": True}]), encoding="utf-8")
     out = stop(loop_env)
     assert blocked(out) and "belong to the hook" in out["reason"]
-    assert json.loads(feats.read_text()) == FEATURES
+    assert json.loads(feats.read_text(encoding="utf-8")) == FEATURES
     assert state(loop_env)["stuck"] == 1
 
 
 def test_row6_bin_is_restored(loop_env):
     baseline(loop_env)
-    (loop_env.wt / ".loop/bin/json.py").write_text("x")
+    (loop_env.wt / ".loop/bin/json.py").write_text("x", encoding="utf-8")
     out = stop(loop_env)
     assert blocked(out)
     assert not (loop_env.wt / ".loop/bin/json.py").exists()
@@ -345,7 +352,9 @@ def test_row6_bin_is_restored(loop_env):
 
 def test_row7_protected_change_blocks(loop_env):
     baseline(loop_env)
-    (loop_env.wt / "tests/test_tool.py").write_text("def test_x():\n    pass\n")
+    (loop_env.wt / "tests/test_tool.py").write_text(
+        "def test_x():\n    pass\n", encoding="utf-8"
+    )
     out = stop(loop_env)
     assert blocked(out) and "tests/test_tool.py" in out["reason"]
 
@@ -353,7 +362,9 @@ def test_row7_protected_change_blocks(loop_env):
 def test_row7_approved_path_passes(loop_env):
     baseline(loop_env)
     prompt(loop_env, f"{CMD} allow tests/test_tool.py")
-    (loop_env.wt / "tests/test_tool.py").write_text("def test_x():\n    pass\n")
+    (loop_env.wt / "tests/test_tool.py").write_text(
+        "def test_x():\n    pass\n", encoding="utf-8"
+    )
     assert "tests/test_tool.py" not in stop(loop_env).get("reason", "")
 
 
@@ -391,7 +402,7 @@ def test_row8a_baseline_turn_blocks_once_without_counting(loop_env):
 def test_row10_needs_cause_and_decision(loop_env):
     baseline(loop_env)
     stop(loop_env)
-    (loop_env.wt / "tool.sh").write_text("echo ok\n")
+    (loop_env.wt / "tool.sh").write_text("echo ok\n", encoding="utf-8")
     record(loop_env, evidence(loop_env, [0, 0]))
     out = stop(loop_env)
     assert blocked(out) and "Cause:" in out["reason"]
@@ -401,7 +412,7 @@ def test_row11_needs_evidence_for_this_content(loop_env):
     baseline(loop_env)
     stop(loop_env)
     iterate(loop_env, 1, [0, 0])
-    (loop_env.wt / "tool.sh").write_text("echo ok again\n")
+    (loop_env.wt / "tool.sh").write_text("echo ok again\n", encoding="utf-8")
     out = stop(loop_env)
     assert blocked(out) and "verify" in out["reason"]
 
@@ -417,15 +428,23 @@ def test_gain_is_kept_and_reaching_the_threshold_bundles(loop_env):
     assert git(wt, "log", "-1", "--format=%s").startswith(
         "loop(demo) #1: tool.sh prints"
     )
-    assert (wt / "tool.sh").read_text() == "echo ok\n"
+    assert (wt / "tool.sh").read_text(encoding="utf-8") == "echo ok\n"
     assert s["best"] == 2 and s["iteration"] == 1 and s["status"] == "bundling"
     assert all(
-        f["passes"] for f in json.loads((wt / ".loop/loop-features.json").read_text())
+        f["passes"]
+        for f in json.loads(
+            (wt / ".loop/loop-features.json").read_text(encoding="utf-8")
+        )
     )
     assert blocked(out) and "bundle" in out["reason"]
-    assert "#1" in (wt / ".loop/LOOP.md").read_text().split(_loop.LOG_HEADING)[1]
+    assert (
+        "#1"
+        in (wt / ".loop/LOOP.md")
+        .read_text(encoding="utf-8")
+        .split(_loop.LOG_HEADING)[1]
+    )
     # The hook ran the diff gate; loopctl bundle reads it from run.json
-    gate = json.loads((wt / ".loop/run.json").read_text())["gate"]
+    gate = json.loads((wt / ".loop/run.json").read_text(encoding="utf-8"))["gate"]
     assert gate["verdict"] == "pass" and gate["files"] == ["tool.sh"]
 
 
@@ -437,7 +456,7 @@ def test_gitleaks_scans_a_linked_worktree(loop_env):
     stop(loop_env)
     iterate(loop_env, 1, [0, 0], text="echo ok  # " + "AKIA" + "QYLPMTMXQ7ABCDEF\n")
     stop(loop_env)
-    gate = json.loads((wt / ".loop/run.json").read_text())["gate"]
+    gate = json.loads((wt / ".loop/run.json").read_text(encoding="utf-8"))["gate"]
     assert gate["secret_scanner"] == "gitleaks", gate
     assert any("gitleaks" in f["text"] for f in gate["rejects"]), gate
 
@@ -445,14 +464,16 @@ def test_gitleaks_scans_a_linked_worktree(loop_env):
 def test_the_gate_judges_the_setup_commit(loop_env):
     # The setup may change the target (tool.sh) and add tests; a stray file is rejected
     wt = loop_env.wt
-    (wt / "tool.sh").write_text("echo no  # setup\n")
-    (wt / "tests/test_more.py").write_text("def test_more():\n    assert True\n")
-    (wt / "sh-thd-1").write_text("")
+    (wt / "tool.sh").write_text("echo no  # setup\n", encoding="utf-8")
+    (wt / "tests/test_more.py").write_text(
+        "def test_more():\n    assert True\n", encoding="utf-8"
+    )
+    (wt / "sh-thd-1").write_text("", encoding="utf-8")
     baseline(loop_env)
     stop(loop_env)
     iterate(loop_env, 1, [0, 0])
     stop(loop_env)
-    gate = json.loads((wt / ".loop/run.json").read_text())["gate"]
+    gate = json.loads((wt / ".loop/run.json").read_text(encoding="utf-8"))["gate"]
     assert [f["file"] for f in gate["rejects"]] == ["sh-thd-1"], gate
 
 
@@ -463,7 +484,7 @@ def test_no_gain_is_reverted(loop_env):
     out = stop(loop_env)
     s = state(loop_env)
     wt = loop_env.wt
-    assert (wt / "tool.sh").read_text() == "echo no\n"
+    assert (wt / "tool.sh").read_text(encoding="utf-8") == "echo no\n"
     assert git(wt, "log", "-1", "--format=%s").startswith("Revert")
     assert (s["no_improve"], s["best"], s["status"]) == (1, 1, "running")
     assert (
@@ -476,7 +497,7 @@ def test_regression_is_reverted(loop_env):
     stop(loop_env)
     iterate(loop_env, 1, [0, 1])
     stop(loop_env)
-    assert (loop_env.wt / "tool.sh").read_text() == "echo no\n"
+    assert (loop_env.wt / "tool.sh").read_text(encoding="utf-8") == "echo no\n"
 
 
 def test_failed_commit_changes_no_score_and_reverts_nothing(loop_env):
@@ -485,7 +506,7 @@ def test_failed_commit_changes_no_score_and_reverts_nothing(loop_env):
     head = git(loop_env.wt, "rev-parse", "HEAD")
     iterate(loop_env, 1, [1, 0], text="echo nope\n")
     lock = loop_env.wt / git(loop_env.wt, "rev-parse", "--git-path", "index.lock")
-    lock.write_text("")
+    lock.write_text("", encoding="utf-8")
     out = stop(loop_env)
     s = state(loop_env)
     assert blocked(out) and "commit" in out["reason"]
@@ -571,10 +592,10 @@ def transcript(env):
         "not json",
         turn("m2", 63, 20),
     ]
-    main.write_text("\n".join(lines) + "\n")
+    main.write_text("\n".join(lines) + "\n", encoding="utf-8")
     sub = env.tmp / "session/subagents/agent-a1.jsonl"
     sub.parent.mkdir(parents=True)
-    sub.write_text(turn("s1", 64, 40) + "\n")
+    sub.write_text(turn("s1", 64, 40) + "\n", encoding="utf-8")
     return str(main)
 
 
@@ -591,7 +612,7 @@ def test_stop_sums_the_tokens_of_this_loop(loop_env):
     baseline(loop_env)
     stop(loop_env, transcript_path=transcript(loop_env))
     assert state(loop_env)["usage"] == SUMS
-    run = json.loads((loop_env.wt / ".loop/run.json").read_text())
+    run = json.loads((loop_env.wt / ".loop/run.json").read_text(encoding="utf-8"))
     assert run["usage"] == SUMS and run["usage_stop"] is False
 
 
@@ -618,8 +639,10 @@ def finished(env, **fields):
     """A done loop with a bundle and a lesson."""
     baseline(env)
     edit_state(env, status="done", **fields)
-    (env.wt / ".loop/bundle.md").write_text("# Loop bundle: demo\n")
-    (env.wt / ".loop/lesson.md").write_text("# What the loop taught\n")
+    (env.wt / ".loop/bundle.md").write_text("# Loop bundle: demo\n", encoding="utf-8")
+    (env.wt / ".loop/lesson.md").write_text(
+        "# What the loop taught\n", encoding="utf-8"
+    )
 
 
 def run_dir(env):
@@ -639,16 +662,18 @@ def test_approve_branches_copies_and_archives(loop_env, where):
     assert "feature/loop-demo" in text and "output 26,500" in text, out
     tip = git(loop_env.wt, "rev-parse", "loop/demo")
     assert git(loop_env.wt, "rev-parse", "feature/loop-demo") == tip
-    assert (run_dir(loop_env) / "bundle.md").read_text() == "# Loop bundle: demo\n"
-    assert "## Goal" in (run_dir(loop_env) / "LOOP.md").read_text()
-    run = json.loads((run_dir(loop_env) / "run.json").read_text())
+    assert (run_dir(loop_env) / "bundle.md").read_text(
+        encoding="utf-8"
+    ) == "# Loop bundle: demo\n"
+    assert "## Goal" in (run_dir(loop_env) / "LOOP.md").read_text(encoding="utf-8")
+    run = json.loads((run_dir(loop_env) / "run.json").read_text(encoding="utf-8"))
     assert run["usage"] == usage
     lesson = (
         loop_env.main
         / ".claude/lessons"
         / f"{run_dir(loop_env).name[:10]}-loop-demo.md"
     )
-    assert lesson.read_text() == "# What the loop taught\n"
+    assert lesson.read_text(encoding="utf-8") == "# What the loop taught\n"
     assert state(loop_env) is None and len(archived(loop_env)) == 1
 
 
@@ -663,7 +688,8 @@ def test_approve_message_carries_the_summary(loop_env):
     }
     finished(loop_env, best=2, gate=gate)
     (loop_env.wt / ".loop/bundle.md").write_text(
-        "## Reviewer answers\n1. Root cause.\n\nVerdict: accept with risks\n"
+        "## Reviewer answers\n1. Root cause.\n\nVerdict: accept with risks\n",
+        encoding="utf-8",
     )
     _, out, _ = prompt(loop_env, f"{APPROVE} demo")
     text = context(out)
@@ -717,7 +743,7 @@ def test_approve_refuses_and_changes_nothing(loop_env, setup, typed, why):
 def test_hook_failure_fails_open(loop_env):
     baseline(loop_env)
     _loop.state_path(loop_env.wt).write_text(
-        '{"worktree": 1, "status": "running", "session_id": "s1"}'
+        '{"worktree": 1, "status": "running", "session_id": "s1"}', encoding="utf-8"
     )
     out = stop(loop_env)
     assert not blocked(out) and "loop hook failed" in out["systemMessage"]

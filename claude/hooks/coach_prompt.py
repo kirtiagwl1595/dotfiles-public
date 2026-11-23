@@ -54,13 +54,17 @@ def enabled_plugins(cwd):
         os.environ.get("COACH_SETTINGS", Path.home() / ".claude" / "settings.json")
     )
     try:
-        enabled = json.loads(user.read_text()).get("enabledPlugins") or {}
+        enabled = (
+            json.loads(user.read_text(encoding="utf-8")).get("enabledPlugins") or {}
+        )
     except (OSError, ValueError, AttributeError):
         return None
     if cwd:
         for name in ("settings.json", "settings.local.json"):
             try:
-                repo = json.loads((Path(cwd) / ".claude" / name).read_text())
+                repo = json.loads(
+                    (Path(cwd) / ".claude" / name).read_text(encoding="utf-8")
+                )
                 enabled = {**enabled, **(repo.get("enabledPlugins") or {})}
             except (OSError, ValueError, AttributeError):
                 continue  # no repo file: the user value stands
@@ -74,7 +78,11 @@ def dormant_hints(prompt, session_id, cwd=None):
     # Once per session, so a recurring topic does not nag every prompt.
     safe_id = re.sub(r"[^\w-]", "_", session_id)
     seen_file = Path(tempfile.gettempdir()) / f"coach-dormant-{safe_id}"
-    seen = set(seen_file.read_text().split()) if seen_file.exists() else set()
+    seen = (
+        set(seen_file.read_text(encoding="utf-8").split())
+        if seen_file.exists()
+        else set()
+    )
     hints = []
     for name, pattern in DORMANT.items():
         # The key is `name@marketplace`: the marketplace is whatever the user installed from
@@ -97,7 +105,7 @@ def dormant_hints(prompt, session_id, cwd=None):
                 "so it needs a sandbox bypass), then `/reload-plugins`."
             )
     if hints:
-        seen_file.write_text("\n".join(sorted(seen)))
+        seen_file.write_text("\n".join(sorted(seen)), encoding="utf-8")
     return hints
 
 

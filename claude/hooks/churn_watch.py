@@ -30,7 +30,7 @@ def log(event, session, repo, **fields):
     entry = {"ts": int(time.time()), "event": event, "session": session, "repo": repo}
     try:
         log_path().parent.mkdir(parents=True, exist_ok=True)
-        with log_path().open("a") as f:
+        with log_path().open("a", encoding="utf-8") as f:
             f.write(json.dumps({**entry, **fields}) + "\n")
     except OSError:
         pass  # the log is for review later; it must never disturb the edit
@@ -47,11 +47,11 @@ def watch(data):
         return
     state = Path(tempfile.gettempdir()) / f"claude-churn-{session}.json"
     try:
-        counts = json.loads(state.read_text())
+        counts = json.loads(state.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         counts = {}
     counts[path] = counts.get(path, 0) + 1
-    state.write_text(json.dumps(counts))
+    state.write_text(json.dumps(counts), encoding="utf-8")
     if counts[path] in NUDGE_AT:
         log("nudge", session, data["cwd"], file=path, edits=counts[path])
         text = (
@@ -69,7 +69,7 @@ def sessions(n):
 
 def report():
     try:
-        lines = log_path().read_text().splitlines()
+        lines = log_path().read_text(encoding="utf-8").splitlines()
     except OSError:
         print("No churn_watch events logged yet.")
         return

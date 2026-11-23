@@ -9,16 +9,10 @@ import subprocess
 import sys
 
 import pytest
-from hookrun import ROOT, env_for
+from hookrun import IDENTITY, ROOT, env_for
 
 SCRIPT = ROOT / "claude" / "repo_setup.py"
 BRANCH = "chore/claude-forward"
-IDENTITY = {
-    "GIT_AUTHOR_NAME": "t",
-    "GIT_AUTHOR_EMAIL": "t@t",
-    "GIT_COMMITTER_NAME": "t",
-    "GIT_COMMITTER_EMAIL": "t@t",
-}
 
 
 def git(repo, *args):

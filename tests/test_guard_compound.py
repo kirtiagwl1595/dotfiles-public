@@ -71,7 +71,7 @@ def test_deny_part_denies(tmp_path):
 def test_user_settings_add_rules(tmp_path):
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".claude" / "settings.json").write_text(
-        json.dumps({"permissions": {"ask": ["Bash(make deploy:*)"]}})
+        json.dumps({"permissions": {"ask": ["Bash(make deploy:*)"]}}), encoding="utf-8"
     )
     assert guard("cd x && make deploy prod", tmp_path) == "ask"
 

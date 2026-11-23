@@ -354,7 +354,7 @@ def test_a_windows_cwd_with_backslashes_still_finds_a_live_checkout(tmp_path):
     subprocess.run(["git", "init", "-q", str(repo)], check=True, capture_output=True)
     config = tmp_path / ".config" / "claude"
     config.mkdir(parents=True)
-    (config / "live-checkout.txt").write_text(f"{repo}\n")
+    (config / "live-checkout.txt").write_text(f"{repo}\n", encoding="utf-8")
     cwd = str(repo).replace("/", "\\") if os.name == "nt" else str(repo)
     payload = powershell("GIT.EXE switch main", cwd=cwd)
     assert decision("guard_live_checkout.py", payload, home=tmp_path) == "deny"

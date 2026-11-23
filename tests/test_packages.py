@@ -333,7 +333,9 @@ def test_pkg_add_installs_and_records_a_trial(tmp_path):
     code, out = pkg(tmp_path, "add", "--manager", "brew", "cowsay", bin_dir=bin_dir)
     assert code == 0, out
     assert calls(tmp_path) == ["brew install cowsay"]
-    trials = json.loads((tmp_path / "pkgdir" / "trials.json").read_text())
+    trials = json.loads(
+        (tmp_path / "pkgdir" / "trials.json").read_text(encoding="utf-8")
+    )
     assert [t["name"] for t in trials["packages"]] == ["cowsay"]
     code, out = pkg(tmp_path, "list", bin_dir=bin_dir)
     assert "cowsay" in out
@@ -354,9 +356,12 @@ def test_pkg_keep_moves_the_trial_into_the_local_file(tmp_path):
     code, out = pkg(tmp_path, "keep", "cowsay", bin_dir=bin_dir)
     assert code == 0, out
     pkgdir = tmp_path / "pkgdir"
-    local = json.loads((pkgdir / "local.json").read_text())
+    local = json.loads((pkgdir / "local.json").read_text(encoding="utf-8"))
     assert local["packages"][0]["brew"] == "cowsay"
-    assert json.loads((pkgdir / "trials.json").read_text())["packages"] == []
+    assert (
+        json.loads((pkgdir / "trials.json").read_text(encoding="utf-8"))["packages"]
+        == []
+    )
 
 
 def test_pkg_keep_of_a_name_that_is_not_a_trial_fails_with_a_message(tmp_path):

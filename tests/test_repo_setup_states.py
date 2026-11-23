@@ -184,7 +184,7 @@ def run_git(repo, *args):
 
 def commit_file(repo, name, text):
     (repo / name).parent.mkdir(parents=True, exist_ok=True)
-    (repo / name).write_text(text)
+    (repo / name).write_text(text, encoding="utf-8")
     run_git(repo, "add", "--", name)
     run_git(repo, "commit", "-qm", f"change {name}")
 
@@ -226,8 +226,12 @@ def ready_branch(repos, repo):
 def old_block(repos, repo):
     ready_branch(repos, repo)
     run_git(repo, "switch", "-q", "chore/claude-forward")
-    lines = (repo / ".gitignore").read_text().replace(".claude/audits/\n", "")
-    (repo / ".gitignore").write_text(lines)
+    lines = (
+        (repo / ".gitignore")
+        .read_text(encoding="utf-8")
+        .replace(".claude/audits/\n", "")
+    )
+    (repo / ".gitignore").write_text(lines, encoding="utf-8")
     run_git(repo, "commit", "-qa", "--amend", "--no-edit")
     run_git(repo, "switch", "-q", "main")
 
@@ -295,7 +299,7 @@ def more_work_on_the_branch(repos, repo):
 def line_after_the_block(repos, repo):
     ready_branch(repos, repo)
     run_git(repo, "switch", "-q", "chore/claude-forward")
-    with (repo / ".gitignore").open("a") as f:
+    with (repo / ".gitignore").open("a", encoding="utf-8") as f:
         f.write("graphify-out/\n")  # as SETUP.md says: echo ... >> .gitignore
     run_git(repo, "commit", "-qam", "ignore the graph")
     run_git(repo, "switch", "-q", "main")
@@ -402,7 +406,7 @@ def test_each_repo_gets_a_next_step_that_it_can_do(repos, monkeypatch, build, wa
 
 
 def dirty(repos, repo):
-    (repo / "app.py").write_text("x = 2\n")
+    (repo / "app.py").write_text("x = 2\n", encoding="utf-8")
 
 
 def team_repo(repos, repo):
@@ -450,9 +454,9 @@ def test_apply_keeps_an_ignored_file_that_main_tracks(repos):
     run_git(repo, "switch", "-qc", "feature/data")
     run_git(repo, "rm", "-q", "data.csv")
     commit_file(repo, ".gitignore", "data.csv\n")
-    (repo / "data.csv").write_text("mine, not in git\n")
+    (repo / "data.csv").write_text("mine, not in git\n", encoding="utf-8")
     repo_setup_lines(repos, "apply", str(repo))
-    assert (repo / "data.csv").read_text() == "mine, not in git\n"
+    assert (repo / "data.csv").read_text(encoding="utf-8") == "mine, not in git\n"
     assert "data.csv" not in committed(repo, ".gitignore")  # built from main
     assert run_git(repo, "worktree", "list").count("\n") == 0  # none left behind
 
@@ -471,12 +475,12 @@ def test_apply_never_writes_through_a_committed_symlink(repos):
     repo = repos / "case"
     make_repo(repo, {"app.py": "x = 1\n"})
     target = repos.parent / "outside.txt"
-    target.write_text("keep\n")
+    target.write_text("keep\n", encoding="utf-8")
     (repo / ".gitignore").symlink_to(target)
     run_git(repo, "add", ".gitignore")
     run_git(repo, "commit", "-qm", "link")
     lines = repo_setup_lines(repos, "apply", str(repo))
-    assert target.read_text() == "keep\n"
+    assert target.read_text(encoding="utf-8") == "keep\n"
     assert any("case: failed, nothing changed" in line for line in lines)
 
 
@@ -533,7 +537,7 @@ def test_untrack_never_runs_hooks_from_a_branch_that_is_only_on_origin(repos):
     )
     run_git(repo, "branch", "-qD", "chore/claude-forward")
     hook = repo / ".git/hooks/pre-commit"
-    hook.write_text("#!/bin/sh\n[ ! -f check.sh ] || sh check.sh\n")
+    hook.write_text("#!/bin/sh\n[ ! -f check.sh ] || sh check.sh\n", encoding="utf-8")
     hook.chmod(0o755)
     refs = run_git(repo, "for-each-ref")
     planned = repo_setup_lines(repos, "plan", str(repos))
@@ -559,7 +563,7 @@ def test_env_ignore_lines_follow_the_env_name_rule(tmp_path):
     text = repo_setup.gitignore_text("", [])
     # All lines there, in order: git uses the last match, so negations stay last
     assert [line for line in text.splitlines() if line in ENV_IGNORE] == ENV_IGNORE
-    (repo / ".gitignore").write_text(text)
+    (repo / ".gitignore").write_text(text, encoding="utf-8")
     git = ["git", "-C", str(repo)]
     subprocess.run([*git, "init", "-q"], check=True)
     hits = subprocess.run(

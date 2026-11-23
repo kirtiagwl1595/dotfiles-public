@@ -138,7 +138,7 @@ def test_shell_tools_and_file_tools_are_guarded():
 def test_launcher_has_unix_line_ends():
     # A CRLF checkout breaks bash: `$'\r': command not found`, which is not exit 2
     assert b"\r\n" not in PY_SH.read_bytes()
-    assert "*.sh text eol=lf" in (ROOT / ".gitattributes").read_text()
+    assert "*.sh text eol=lf" in (ROOT / ".gitattributes").read_text(encoding="utf-8")
 
 
 def test_launcher_passes_the_arguments_after_the_script(tmp_path):

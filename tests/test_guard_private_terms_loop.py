@@ -17,7 +17,7 @@ def run_copy(tmp_path, loop_source):
     for name in ("_common.py", "guard_private_terms.py"):
         shutil.copyfile(HOOKS / name, tmp_path / name)
     if loop_source is not None:
-        (tmp_path / "_loop.py").write_text(loop_source)
+        (tmp_path / "_loop.py").write_text(loop_source, encoding="utf-8")
     payload = {
         "tool_name": "Write",
         "tool_input": {"file_path": str(tmp_path / "a.txt"), "content": "hello"},

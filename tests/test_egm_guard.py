@@ -28,7 +28,7 @@ def guard(tool, tool_input, transcript=None):
 
 def transcript(tmp_path, *entries):
     t = tmp_path / "session.jsonl"
-    t.write_text("".join(json.dumps(e) + "\n" for e in entries))
+    t.write_text("".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8")
     return t
 
 
@@ -118,7 +118,9 @@ def test_reviewer_asks_without_a_transcript(tmp_path):
 
 
 def test_hook_runs_on_skill_and_agent():
-    pre = json.loads((HOOKS / "hooks.json").read_text())["hooks"]["PreToolUse"]
+    pre = json.loads((HOOKS / "hooks.json").read_text(encoding="utf-8"))["hooks"][
+        "PreToolUse"
+    ]
     entry = next(e for e in pre if "guard_egm.py" in e["hooks"][0]["command"])
     assert entry["matcher"] == "Skill|Agent"
 

@@ -38,7 +38,7 @@ def repo(tmp_path):
     git(root, "config", "user.email", "t@example.com")
     for rel, text in BASE_FILES.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        (root / rel).write_text(text)
+        (root / rel).write_text(text, encoding="utf-8")
     git(root, "add", "-A")
     git(root, "commit", "-qm", "fork point")
     # As confirm makes it: commit #0 (setup) on the fork point is the loop's base
@@ -50,7 +50,7 @@ def repo(tmp_path):
 def change(root, files):
     for rel, text in files.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        (root / rel).write_text(text)
+        (root / rel).write_text(text, encoding="utf-8")
     git(root, "add", "-A")
     git(root, "commit", "-qm", "change")
 
@@ -174,7 +174,7 @@ def test_the_report_names_the_secret_scanner(repo, tmp_path, gitleaks_exit, scan
     tools.mkdir()
     if gitleaks_exit is not None:
         stub = tools / "gitleaks"
-        stub.write_text(f"#!/bin/sh\nexit {gitleaks_exit}\n")
+        stub.write_text(f"#!/bin/sh\nexit {gitleaks_exit}\n", encoding="utf-8")
         stub.chmod(0o755)
     change(repo, {"conf.py": "x = 1\n"})
     env = {**os.environ, "PATH": f"{tools}:/usr/bin:/bin"}
@@ -211,7 +211,9 @@ def allowlist_config(repo):
 def ignore_file(repo):
     change(repo, {"conf.py": f'KEY = "{AWS_KEY}"\n'})
     sha = git(repo, "rev-parse", "HEAD")
-    (repo / ".gitleaksignore").write_text(f"{sha}:conf.py:aws-access-token:1\n")
+    (repo / ".gitleaksignore").write_text(
+        f"{sha}:conf.py:aws-access-token:1\n", encoding="utf-8"
+    )
 
 
 @pytest.mark.skipif(not shutil.which("gitleaks"), reason="gitleaks is not installed")

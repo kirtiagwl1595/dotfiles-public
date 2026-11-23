@@ -20,7 +20,9 @@ MODEL_ID = re.compile(r"claude-(opus|sonnet|haiku|fable)-\d")
 
 def design_rows():
     """{name: (model, tools, preloads)} for each `<name>` agent row of the §17.2 table."""
-    section = DOC.read_text().split("### §17.2", 1)[1].split("\n## ", 1)[0]
+    section = (
+        DOC.read_text(encoding="utf-8").split("### §17.2", 1)[1].split("\n## ", 1)[0]
+    )
     rows = {}
     for line in section.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
@@ -52,7 +54,7 @@ def test_every_agent_file_has_a_design_row():
 @pytest.mark.parametrize("name", sorted(ROWS))
 def test_agent_file_matches_its_design_row(name):
     model, tools, preloads = ROWS[name]
-    text = (AGENTS / f"{name}.md").read_text()
+    text = (AGENTS / f"{name}.md").read_text(encoding="utf-8")
     meta = _loop.frontmatter(text)
     assert meta["name"] == name
     assert meta.get("description")
@@ -64,7 +66,7 @@ def test_agent_file_matches_its_design_row(name):
 
 @pytest.mark.parametrize("name", sorted(ROWS))
 def test_preloaded_skills_exist(name):
-    text = (AGENTS / f"{name}.md").read_text()
+    text = (AGENTS / f"{name}.md").read_text(encoding="utf-8")
     for skill in skills_of(text):
         plugin, _, short = skill.partition(":")
         assert (

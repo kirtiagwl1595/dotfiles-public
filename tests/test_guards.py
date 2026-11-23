@@ -437,7 +437,7 @@ def test_globs_and_other_secret_forms_blocked(cmd):
 )
 def test_globs_are_judged_by_the_files_they_reach(tmp_path, files, cmd, blocked):
     for name in files:
-        (tmp_path / name).write_text("x\n")
+        (tmp_path / name).write_text("x\n", encoding="utf-8")
     code, out, _ = run("guard_secrets.py", bash(cmd, cwd=str(tmp_path)))
     assert code == 2 if blocked else (code, out) == (0, "")
 
@@ -542,9 +542,11 @@ def test_a_crash_while_reading_the_payload_denies_through_guard_bash():
 # ── guard_bash import failure ───────────────────────────────────────────────
 @pytest.mark.parametrize("sibling", [None, "def broken(:\n"])
 def test_guard_bash_blocks_when_a_guard_cannot_load(tmp_path, sibling):
-    (tmp_path / "guard_bash.py").write_text((HOOKS / "guard_bash.py").read_text())
+    (tmp_path / "guard_bash.py").write_text(
+        (HOOKS / "guard_bash.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
     if sibling:
-        (tmp_path / "guard_compound.py").write_text(sibling)
+        (tmp_path / "guard_compound.py").write_text(sibling, encoding="utf-8")
     p = subprocess.run(
         [sys.executable, "-B", str(tmp_path / "guard_bash.py")],
         check=False,

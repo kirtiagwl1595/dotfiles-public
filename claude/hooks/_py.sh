@@ -7,12 +7,18 @@ pyrun() {
   for p in python3 "py -3" python; do
     # $p unquoted on purpose: "py -3" is a program and an option
     if $p -c "import sys; sys.exit(sys.version_info < (3, 9))" >/dev/null 2>&1; then
-      $p "$@"
-      return
+      # Windows Python ends a printed line with CRLF; bash `read` keeps the \r in the last field
+      # (so `== True` fails). Strip it here, once, and keep Python's own exit status.
+      $p "$@" | tr -d '\r'
+      return "${PIPESTATUS[0]}"
     fi
   done
   return 127
 }
+
+# One path form for every comparison and key: forward slashes, as `git rev-parse` prints them
+# on Windows (a C:\x path from a test or an env var becomes C:/x)
+fwd() { printf '%s' "${1//\\//}"; }
 
 # A hash of stdin, with the tool this machine has (shasum is not on every Git Bash)
 sha() {

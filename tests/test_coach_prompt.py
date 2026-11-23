@@ -76,7 +76,8 @@ def dormant_env(tmp_path):
     def make(enabled):
         settings = tmp_path / "settings.json"
         settings.write_text(
-            json.dumps({"enabledPlugins": {"ecc-picks@dotfiles-public": enabled}})
+            json.dumps({"enabledPlugins": {"ecc-picks@dotfiles-public": enabled}}),
+            encoding="utf-8",
         )
         return {**env_for(), "COACH_SETTINGS": str(settings), "TMPDIR": str(tmp_path)}
 
@@ -121,7 +122,7 @@ def test_dormant_hints_name_only_plugins_this_repo_ships():
 )
 def test_off_plugin_hint_enables_per_repo(tmp_path, key, prompt):
     settings = tmp_path / "settings.json"
-    settings.write_text(json.dumps({"enabledPlugins": {key: False}}))
+    settings.write_text(json.dumps({"enabledPlugins": {key: False}}), encoding="utf-8")
     env = {**env_for(), "COACH_SETTINGS": str(settings), "TMPDIR": str(tmp_path)}
     out = coach(prompt, env)[1]
     assert f"claude plugin enable {key} --scope local" in out
@@ -129,18 +130,22 @@ def test_off_plugin_hint_enables_per_repo(tmp_path, key, prompt):
 
 def test_no_hint_for_a_plugin_that_is_not_installed(tmp_path):
     settings = tmp_path / "settings.json"
-    settings.write_text(json.dumps({"enabledPlugins": {"other@x": False}}))
+    settings.write_text(
+        json.dumps({"enabledPlugins": {"other@x": False}}), encoding="utf-8"
+    )
     env = {**env_for(), "COACH_SETTINGS": str(settings), "TMPDIR": str(tmp_path)}
     assert coach("upload this model to Hugging Face", env) == (0, "", "")
 
 
 def test_no_dormant_hint_when_the_repo_enabled_it(tmp_path):
     settings = tmp_path / "settings.json"
-    settings.write_text(json.dumps({"enabledPlugins": {"hf-picks@x": False}}))
+    settings.write_text(
+        json.dumps({"enabledPlugins": {"hf-picks@x": False}}), encoding="utf-8"
+    )
     repo = tmp_path / "repo"
     (repo / ".claude").mkdir(parents=True)
     (repo / ".claude/settings.local.json").write_text(
-        json.dumps({"enabledPlugins": {"hf-picks@x": True}})
+        json.dumps({"enabledPlugins": {"hf-picks@x": True}}), encoding="utf-8"
     )
     env = {**env_for(), "COACH_SETTINGS": str(settings), "TMPDIR": str(tmp_path)}
     out = run(

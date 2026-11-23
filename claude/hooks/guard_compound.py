@@ -229,7 +229,7 @@ def load_rules(cwd):
     rules = {"allow": [], "ask": [], "deny": []}
     for f in settings_files(cwd):
         try:
-            perms = json.loads(f.read_text()).get("permissions", {})
+            perms = json.loads(f.read_text(encoding="utf-8")).get("permissions", {})
         except (OSError, ValueError, AttributeError):
             continue
         for kind in rules:

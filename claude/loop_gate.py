@@ -171,7 +171,7 @@ class Diff:
 
     def read(self, rel):
         try:
-            return (self.root / rel).read_text(errors="ignore")
+            return (self.root / rel).read_text(errors="ignore", encoding="utf-8")
         except OSError:
             return ""
 

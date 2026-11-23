@@ -19,7 +19,7 @@ def runner(tmp_path, *args):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     stub = bin_dir / "claude"
-    stub.write_text('#!/bin/sh\necho "$@"\n')
+    stub.write_text('#!/bin/sh\necho "$@"\n', encoding="utf-8")
     stub.chmod(0o755)
     return subprocess.run(
         ["bash", str(RUNNER), *args],

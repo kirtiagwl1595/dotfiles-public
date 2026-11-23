@@ -151,7 +151,7 @@ def state_path(worktree):
 
 def load_state(worktree):
     try:
-        return json.loads(state_path(worktree).read_text())
+        return json.loads(state_path(worktree).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
 
@@ -184,7 +184,7 @@ def atomic_write(path, text, root=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(text)
         os.replace(tmp, path)
     except BaseException:
@@ -317,7 +317,9 @@ def progress_text(worktree):
     """loop-progress.md without HTML comments: the template's hints are not the agent's
     causes. "" when the file is missing."""
     try:
-        text = (Path(worktree) / LOOP_DIR / "loop-progress.md").read_text()
+        text = (Path(worktree) / LOOP_DIR / "loop-progress.md").read_text(
+            encoding="utf-8"
+        )
     except OSError:
         return ""
     return re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
@@ -430,7 +432,7 @@ def _rules():
     rules = []
     for path in (local, tracked):  # local first: the operator's rules win
         try:
-            rules += json.loads(path.read_text())
+            rules += json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
     return [r for r in rules if isinstance(r, dict)]

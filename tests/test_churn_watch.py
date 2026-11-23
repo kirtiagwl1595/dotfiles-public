@@ -18,7 +18,7 @@ def env(tmp_path):
 
 def log_lines(env):
     log = Path(env["XDG_STATE_HOME"]) / "safe-lean" / "churn.jsonl"
-    return [json.loads(line) for line in log.read_text().splitlines()]
+    return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
 
 
 @pytest.fixture

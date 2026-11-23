@@ -28,15 +28,15 @@ def seed_backups(home):
     root = home / BACKUP
     for run in RUNS:
         (root / run).mkdir(parents=True)
-        (root / run / ".zshrc").write_text(run)
+        (root / run / ".zshrc").write_text(run, encoding="utf-8")
         (root / run / "tool/sub").mkdir(parents=True)
-        (root / run / "tool/sub/file").write_text(run)
+        (root / run / "tool/sub/file").write_text(run, encoding="utf-8")
         (root / run / "link").symlink_to(home / "target-that-stays")
-    (home / "target-that-stays").write_text("keep")
-    (root / RUNS[0] / ".gitconfig").write_text("only copy")
+    (home / "target-that-stays").write_text("keep", encoding="utf-8")
+    (root / RUNS[0] / ".gitconfig").write_text("only copy", encoding="utf-8")
     (root / RUNS[0] / "cleanup/.pyenv").mkdir(parents=True)
-    (root / RUNS[0] / "cleanup/.pyenv/x").write_text("moved tool")
-    (root / "gitconfig-before-pull-rebase").write_text("hand")
+    (root / RUNS[0] / "cleanup/.pyenv/x").write_text("moved tool", encoding="utf-8")
+    (root / "gitconfig-before-pull-rebase").write_text("hand", encoding="utf-8")
     return root
 
 
@@ -44,14 +44,16 @@ def assert_pruned(home, root):
     assert not (root / RUNS[0] / ".zshrc").exists()
     assert not (root / RUNS[0] / "tool").exists()
     assert not (root / RUNS[0] / "link").is_symlink()
-    assert (home / "target-that-stays").read_text() == "keep"
+    assert (home / "target-that-stays").read_text(encoding="utf-8") == "keep"
     for run in RUNS[1:]:
-        assert (root / run / ".zshrc").read_text() == run
+        assert (root / run / ".zshrc").read_text(encoding="utf-8") == run
         assert (root / run / "tool/sub/file").exists()
         assert (root / run / "link").is_symlink()
-    assert (root / RUNS[0] / ".gitconfig").read_text() == "only copy"
-    assert (root / RUNS[0] / "cleanup/.pyenv/x").read_text() == "moved tool"
-    assert (root / "gitconfig-before-pull-rebase").read_text() == "hand"
+    assert (root / RUNS[0] / ".gitconfig").read_text(encoding="utf-8") == "only copy"
+    assert (root / RUNS[0] / "cleanup/.pyenv/x").read_text(
+        encoding="utf-8"
+    ) == "moved tool"
+    assert (root / "gitconfig-before-pull-rebase").read_text(encoding="utf-8") == "hand"
 
 
 def prune(root, command):
@@ -77,7 +79,7 @@ def test_prune_removes_a_run_folder_left_empty(home):
     root = home / BACKUP
     for run in RUNS:
         (root / run).mkdir(parents=True)
-        (root / run / ".zshrc").write_text(run)
+        (root / run / ".zshrc").write_text(run, encoding="utf-8")
     prune(root, "apply")
     assert not (root / RUNS[0]).exists()
 

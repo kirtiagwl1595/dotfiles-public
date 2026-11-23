@@ -194,7 +194,9 @@ def excluded_patterns(cwd):
     for f in settings_files(cwd):
         try:
             found += (
-                json.loads(f.read_text()).get("sandbox", {}).get("excludedCommands", [])
+                json.loads(f.read_text(encoding="utf-8"))
+                .get("sandbox", {})
+                .get("excludedCommands", [])
             )
         except (OSError, ValueError, AttributeError):
             continue

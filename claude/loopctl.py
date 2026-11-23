@@ -119,7 +119,7 @@ def from_project_files(wt):
     pyproject = wt / "pyproject.toml"
     if pyproject.is_file():
         headers = re.findall(
-            r"^\[([^\]]+)\]", pyproject.read_text(), flags=re.MULTILINE
+            r"^\[([^\]]+)\]", pyproject.read_text(encoding="utf-8"), flags=re.MULTILINE
         )
         for prefix, cmd in PYPROJECT.items():
             if any(h == prefix or h.startswith(prefix + ".") for h in headers):
@@ -128,7 +128,7 @@ def from_project_files(wt):
                 )
     package = wt / "package.json"
     if package.is_file():
-        scripts = json.loads(package.read_text()).get("scripts", {})
+        scripts = json.loads(package.read_text(encoding="utf-8")).get("scripts", {})
         for name in PACKAGE_SCRIPTS:
             if name in scripts:
                 found.append(
@@ -141,7 +141,7 @@ def from_project_files(wt):
     makefile = wt / "Makefile"
     if makefile.is_file():
         targets = re.findall(
-            r"^([A-Za-z_-]+):", makefile.read_text(), flags=re.MULTILINE
+            r"^([A-Za-z_-]+):", makefile.read_text(encoding="utf-8"), flags=re.MULTILINE
         )
         for name in MAKE_TARGETS:
             if name in targets:
@@ -154,7 +154,11 @@ def from_project_files(wt):
 def repo_commands(wt):
     """The commands that CLAUDE.md and the project files name, each once; none run."""
     claude_md = wt / "CLAUDE.md"
-    found = from_claude_md(claude_md.read_text()) if claude_md.is_file() else []
+    found = (
+        from_claude_md(claude_md.read_text(encoding="utf-8"))
+        if claude_md.is_file()
+        else []
+    )
     found += from_project_files(wt)
     seen, out = set(), []
     for c in found:
@@ -205,9 +209,11 @@ def discover(_args):
 # ── verify ──────────────────────────────────────────────────────────────────
 def loop_files(wt):
     try:
-        text = (wt / ".loop/LOOP.md").read_text()
-        features = json.loads((wt / ".loop/loop-features.json").read_text())
-        run_json = json.loads((wt / ".loop/run.json").read_text())
+        text = (wt / ".loop/LOOP.md").read_text(encoding="utf-8")
+        features = json.loads(
+            (wt / ".loop/loop-features.json").read_text(encoding="utf-8")
+        )
+        run_json = json.loads((wt / ".loop/run.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         raise Usage(
             f"No confirmed loop here ({e}). Type the confirm command first."
@@ -246,7 +252,7 @@ def eval_runs(wt, case):
         EVAL_TIMEOUT,
     )
     try:
-        data = json.loads((out / "aggregate-result.json").read_text())
+        data = json.loads((out / "aggregate-result.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         tail = " | ".join(lines[-5:])
         raise Usage(f"The eval wrote no result (run.sh exit {code}): {tail}") from None
@@ -357,7 +363,7 @@ def eval_spend(wt):
     total, runs = 0.0, 0
     for path in sorted((wt / EVAL_OUT).glob("*/aggregate-result.json")):
         try:
-            cost = json.loads(path.read_text()).get("costUsd")
+            cost = json.loads(path.read_text(encoding="utf-8")).get("costUsd")
         except (OSError, ValueError, AttributeError):
             continue
         if isinstance(cost, (int, float)):
@@ -448,13 +454,13 @@ def bundle(_args):
     wt = root()
     text, features, run_json = loop_files(wt)
     path = wt / ".loop/bundle.md"
-    old = _loop.sections(path.read_text()) if path.is_file() else {}
+    old = _loop.sections(path.read_text(encoding="utf-8")) if path.is_file() else {}
     sections = bundle_sections(wt, text, features, run_json, old)
     body = "".join(
         f"## {name}\n{sections[name].rstrip()}\n\n" for name in _loop.BUNDLE_SECTIONS
     )
     _loop.atomic_write(path, f"# Loop bundle: {run_json.get('slug')}\n\n{body}")
-    missing = _loop.missing_sections(path.read_text())
+    missing = _loop.missing_sections(path.read_text(encoding="utf-8"))
     if missing:
         print(f"Wrote .loop/bundle.md. Fill these sections: {', '.join(missing)}.")
         return 1
@@ -489,7 +495,7 @@ def tracked(wt):
 
 def read(wt, rel):
     try:
-        return (wt / rel).read_text(errors="replace")
+        return (wt / rel).read_text(errors="replace", encoding="utf-8")
     except OSError:
         return ""
 

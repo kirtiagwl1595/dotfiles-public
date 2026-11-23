@@ -217,13 +217,13 @@ def test_plugin_is_added_from_the_clone(tmp_path):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     stub = bin_dir / "claude"
-    stub.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\n')
+    stub.write_text(f'#!/bin/sh\necho "$@" >> "{log}"\n', encoding="utf-8")
     stub.chmod(0o755)
     home = tmp_path / "home"
     home.mkdir()
     code, out = install(home, "--skip-tools", path_prefix=bin_dir)
     assert code == 0, out
-    calls = log.read_text().splitlines()
+    calls = log.read_text(encoding="utf-8").splitlines()
     assert f"plugin marketplace add {(ROOT / 'claude').as_posix()}" in calls
     assert "plugin install safe-lean@dotfiles-public" in calls
 
@@ -234,7 +234,8 @@ def stub_claude_with_plugin(tmp_path, log):
     bin_dir.mkdir()
     stub = bin_dir / "claude"
     stub.write_text(
-        f'#!/bin/sh\necho "$@" >> "{log}"\necho "dotfiles-public safe-lean@dotfiles-public"\n'
+        f'#!/bin/sh\necho "$@" >> "{log}"\necho "dotfiles-public safe-lean@dotfiles-public"\n',
+        encoding="utf-8",
     )
     stub.chmod(0o755)
     return bin_dir
@@ -266,7 +267,9 @@ def test_an_old_plugin_copy_is_updated_on_yes(tmp_path, answer, updated):
         path_prefix=stub_claude_with_plugin(tmp_path, log),
     )
     assert code == 0, out
-    assert ("plugin update safe-lean@dotfiles-public" in log.read_text()) is updated
+    assert (
+        "plugin update safe-lean@dotfiles-public" in log.read_text(encoding="utf-8")
+    ) is updated
 
 
 @pytest.mark.skipif(os.name == "nt", reason="the stub claude is a shell script")
@@ -282,7 +285,7 @@ def test_the_current_plugin_copy_is_not_updated(tmp_path):
         path_prefix=stub_claude_with_plugin(tmp_path, log),
     )
     assert code == 0, out
-    assert "plugin update" not in log.read_text()
+    assert "plugin update" not in log.read_text(encoding="utf-8")
 
 
 @pytest.mark.skipif(os.name == "nt", reason="the stub claude is a shell script")
@@ -299,4 +302,4 @@ def test_check_names_the_plugin_update_and_runs_nothing(tmp_path):
     )
     assert code == 0, out
     assert "claude plugin update safe-lean@dotfiles-public" in out
-    assert "plugin update" not in log.read_text()
+    assert "plugin update" not in log.read_text(encoding="utf-8")

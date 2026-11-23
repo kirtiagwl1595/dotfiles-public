@@ -21,7 +21,7 @@ def egm_started(transcript_path):
     """True if this session already ran an EGM skill: typed by the user, or an approved Skill call."""
     calls, done = set(), set()
     try:
-        with open(transcript_path, errors="ignore") as f:
+        with open(transcript_path, errors="ignore", encoding="utf-8") as f:
             for line in f:
                 if "egm:" not in line and "tool_result" not in line:
                     continue

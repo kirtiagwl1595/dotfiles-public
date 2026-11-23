@@ -9,6 +9,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 HOOKS = ROOT / "claude" / "hooks"
 HOME = os.path.expanduser("~")
+# A CI runner has no git identity: a test that commits passes these to env_for
+IDENTITY = {
+    "GIT_AUTHOR_NAME": "t",
+    "GIT_AUTHOR_EMAIL": "t@t",
+    "GIT_COMMITTER_NAME": "t",
+    "GIT_COMMITTER_EMAIL": "t@t",
+}
 
 
 def env_for(home=None, **extra):

@@ -168,7 +168,7 @@ def test_state_round_trip_is_atomic(loop_env):
 def test_atomic_write_never_writes_through_a_symlink(loop_env):
     # The agent can plant links in .loop/; the hook that writes there runs unsandboxed
     outside = loop_env.tmp / "outside.txt"
-    outside.write_text("user file\n")
+    outside.write_text("user file\n", encoding="utf-8")
     loop = loop_env.wt / ".loop"
     loop.mkdir()
     (loop / "LOOP.md.tmp").symlink_to(outside)
@@ -176,8 +176,8 @@ def test_atomic_write_never_writes_through_a_symlink(loop_env):
     for name in ("LOOP.md", "run.json"):
         _loop.atomic_write(loop / name, "hook text\n", root=loop_env.wt)
         assert not (loop / name).is_symlink()
-        assert (loop / name).read_text() == "hook text\n"
-    assert outside.read_text() == "user file\n"
+        assert (loop / name).read_text(encoding="utf-8") == "hook text\n"
+    assert outside.read_text(encoding="utf-8") == "user file\n"
 
 
 def test_atomic_write_refuses_a_symlinked_folder_below_the_root(loop_env):
@@ -200,24 +200,24 @@ def test_content_hash_skips_loop_folder_and_tool_output(loop_env):
     wt = loop_env.wt
     before = _loop.content_hash(wt)
     (wt / ".loop").mkdir()
-    (wt / ".loop/loop-progress.md").write_text("x")
+    (wt / ".loop/loop-progress.md").write_text("x", encoding="utf-8")
     (wt / "tests/__pycache__").mkdir()
     (wt / "tests/__pycache__/x.pyc").write_bytes(b"x")
     (wt / ".pytest_cache").mkdir()
-    (wt / ".pytest_cache/v").write_text("x")
+    (wt / ".pytest_cache/v").write_text("x", encoding="utf-8")
     assert _loop.content_hash(wt) == before
-    (wt / "new.py").write_text("x = 1\n")
+    (wt / "new.py").write_text("x = 1\n", encoding="utf-8")
     assert _loop.content_hash(wt) != before
 
 
 def test_changed_paths_against_base(loop_env):
     wt = loop_env.wt
     base = git(wt, "rev-parse", "HEAD")
-    (wt / "tool.sh").write_text("echo ok\n")
-    (wt / "tests/test_new.py").write_text("x")
+    (wt / "tool.sh").write_text("echo ok\n", encoding="utf-8")
+    (wt / "tests/test_new.py").write_text("x", encoding="utf-8")
     (wt / "keep.txt").unlink()
     (wt / ".loop").mkdir()
-    (wt / ".loop/x").write_text("x")
+    (wt / ".loop/x").write_text("x", encoding="utf-8")
     assert _loop.changed_paths(wt, base) == {
         "tool.sh",
         "tests/test_new.py",
@@ -242,9 +242,9 @@ def test_spec_split_and_frontmatter():
 def test_bin_sha_covers_every_file(loop_env):
     b = loop_env.wt / ".loop/bin"
     b.mkdir(parents=True)
-    (b / "_loop.py").write_text("x = 1\n")
+    (b / "_loop.py").write_text("x = 1\n", encoding="utf-8")
     first = _loop.bin_sha(loop_env.wt)
-    (b / "json.py").write_text("x")
+    (b / "json.py").write_text("x", encoding="utf-8")
     assert _loop.bin_sha(loop_env.wt) != first
 
 
@@ -296,7 +296,7 @@ def test_profile_remote_rule(loop_env, remote, rule, want):
     cfg = loop_env.home / ".config/claude"
     cfg.mkdir(parents=True)
     rules = [{"remote": rule, "profile": "personal"}]
-    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules))
+    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules), encoding="utf-8")
     assert _loop.profile_for(loop_env.wt) == want
 
 

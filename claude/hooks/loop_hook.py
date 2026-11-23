@@ -124,7 +124,7 @@ def mirrors_differ(state):
     wt = Path(state["worktree"])
     for rel, text in mirror_texts(state).items():
         try:
-            if (wt / rel).read_text() != text:
+            if (wt / rel).read_text(encoding="utf-8") != text:
                 return True
         except OSError:
             return True
@@ -154,8 +154,10 @@ def read_spec(wt):
     except _loop.Unsafe as e:
         raise Refused(str(e)) from e
     try:
-        text = (wt / ".loop/LOOP.md").read_text()
-        features = json.loads((wt / ".loop/loop-features.json").read_text())
+        text = (wt / ".loop/LOOP.md").read_text(encoding="utf-8")
+        features = json.loads(
+            (wt / ".loop/loop-features.json").read_text(encoding="utf-8")
+        )
     except (OSError, ValueError) as e:
         raise Refused(
             f"Write .loop/LOOP.md and .loop/loop-features.json first ({e})."
@@ -303,7 +305,7 @@ def repo_loops(main):
     out = []
     for path in sorted(_loop.state_dir().glob("*.json")):
         try:
-            state = json.loads(path.read_text())
+            state = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue  # rate_limits.json and broken files are no loops
         wt = state.get("worktree") if isinstance(state, dict) else None
@@ -382,7 +384,7 @@ def summary(state, bundle_rel):
 
 def read_or_none(path):
     try:
-        return Path(path).read_text()
+        return Path(path).read_text(encoding="utf-8")
     except OSError:
         return None
 
@@ -599,7 +601,9 @@ def cause_entry(state):
 def rate_limits():
     """The statusline's snapshot (§11.4), or None: then no usage stop can fire."""
     try:
-        limits = json.loads((_loop.state_dir() / "rate_limits.json").read_text())
+        limits = json.loads(
+            (_loop.state_dir() / "rate_limits.json").read_text(encoding="utf-8")
+        )
     except (OSError, ValueError):
         return None
     return limits if isinstance(limits, dict) else None
@@ -672,7 +676,7 @@ def count_usage(state, data):
 
 def bundle_check(state):
     try:
-        text = (Path(state["worktree"]) / ".loop/bundle.md").read_text()
+        text = (Path(state["worktree"]) / ".loop/bundle.md").read_text(encoding="utf-8")
     except OSError:
         text = ""
     missing = _loop.missing_sections(text)

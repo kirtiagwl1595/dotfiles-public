@@ -95,7 +95,7 @@ def test_zsh_files_name_no_private_helper(name):
 def test_brewup_updates_and_upgrades_through_brew(tmp_path):
     log, stub = tmp_path / "brew.log", tmp_path / "bin"
     stub.mkdir()
-    (stub / "brew").write_text(f'#!/bin/sh\necho "$*" >> {log}\n')
+    (stub / "brew").write_text(f'#!/bin/sh\necho "$*" >> {log}\n', encoding="utf-8")
     (stub / "brew").chmod(0o755)
     fn = re.search(
         r"^brewup\(\) \{.*?^\}",
@@ -104,7 +104,7 @@ def test_brewup_updates_and_upgrades_through_brew(tmp_path):
     )
     env = {"PATH": f"{stub}:/usr/bin:/bin", "HOME": str(tmp_path)}
     subprocess.run([ZSH, "-fc", fn.group(0) + "\nbrewup"], env=env, check=True)
-    got = log.read_text().splitlines()
+    got = log.read_text(encoding="utf-8").splitlines()
     assert got[0] == "update" and "upgrade" in got
 
 

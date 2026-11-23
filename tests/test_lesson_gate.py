@@ -5,6 +5,7 @@ The user opts in with ~/.config/claude/lesson-gate (an empty file). Hook wiring 
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from datetime import date
@@ -23,7 +24,7 @@ def repo(tmp_path):
     r.mkdir()
     # The gate is off until the user opts in with this file
     (tmp_path / ".config" / "claude").mkdir(parents=True)
-    (tmp_path / ".config" / "claude" / "lesson-gate").write_text("")
+    (tmp_path / ".config" / "claude" / "lesson-gate").write_text("", encoding="utf-8")
     env = {
         **env_for(tmp_path),
         "TMPDIR": str(tmp_path),
@@ -39,7 +40,7 @@ def repo(tmp_path):
         "commit.gpgsign=false",
     ]
     subprocess.run(["git", "init", "-q", str(r)], check=True, env=env)
-    (r / "a.txt").write_text("one\n")
+    (r / "a.txt").write_text("one\n", encoding="utf-8")
     subprocess.run([*git, "-C", str(r), "add", "."], check=True, env=env)
     subprocess.run([*git, "-C", str(r), "commit", "-qm", "init"], check=True, env=env)
     return r, env
@@ -70,19 +71,19 @@ def test_lesson_quiet_without_change(repo):
 def test_lesson_asked_after_change(repo, change):
     r, env = repo
     if change == "edit_dirty":  # already dirty at start: a further edit still counts
-        (r / "a.txt").write_text("two\n")
+        (r / "a.txt").write_text("two\n", encoding="utf-8")
     gate("snapshot", r, env)
     if change == "new_file":
-        (r / "b.txt").write_text("new\n")
+        (r / "b.txt").write_text("new\n", encoding="utf-8")
     else:
-        (r / "a.txt").write_text("three\n")
+        (r / "a.txt").write_text("three\n", encoding="utf-8")
     code, err = gate("check", r, env)
     assert code == 2 and "lesson" in err
 
 
 def test_lesson_quiet_when_dirty_tree_unchanged(repo):
     r, env = repo
-    (r / "a.txt").write_text("two\n")
+    (r / "a.txt").write_text("two\n", encoding="utf-8")
     gate("snapshot", r, env)
     assert gate("check", r, env)[0] == 0
 
@@ -90,17 +91,19 @@ def test_lesson_quiet_when_dirty_tree_unchanged(repo):
 def test_lesson_quiet_when_todays_lesson_exists(repo):
     r, env = repo
     gate("snapshot", r, env)
-    (r / "b.txt").write_text("new\n")
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     lessons = r / ".claude" / "lessons"
     lessons.mkdir(parents=True)
-    (lessons / f"{date.today():%Y-%m-%d}-topic.md").write_text("# lesson\n")
+    (lessons / f"{date.today():%Y-%m-%d}-topic.md").write_text(
+        "# lesson\n", encoding="utf-8"
+    )
     assert gate("check", r, env)[0] == 0
 
 
 def test_lesson_asked_only_once_per_session(repo):
     r, env = repo
     gate("snapshot", r, env)
-    (r / "b.txt").write_text("new\n")
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     assert gate("check", r, env)[0] == 2
     assert gate("check", r, env)[0] == 0
 
@@ -108,13 +111,13 @@ def test_lesson_asked_only_once_per_session(repo):
 def test_lesson_quiet_when_stop_hook_active(repo):
     r, env = repo
     gate("snapshot", r, env)
-    (r / "b.txt").write_text("new\n")
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     assert gate("check", r, env, active=True)[0] == 0
 
 
 def test_lesson_quiet_without_snapshot(repo):
     r, env = repo
-    (r / "b.txt").write_text("new\n")
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     assert gate("check", r, env, session="never-started")[0] == 0
 
 
@@ -128,7 +131,7 @@ def test_lesson_quiet_when_home_is_the_repo(tmp_path):
     # A git-tracked home (eval sandbox, bare-dotfiles setups): Claude's own writes under ~ are not real work.
     # The gate is off until the user opts in with this file
     (tmp_path / ".config" / "claude").mkdir(parents=True)
-    (tmp_path / ".config" / "claude" / "lesson-gate").write_text("")
+    (tmp_path / ".config" / "claude" / "lesson-gate").write_text("", encoding="utf-8")
     env = {
         **env_for(tmp_path),
         "TMPDIR": str(tmp_path),
@@ -139,7 +142,7 @@ def test_lesson_quiet_when_home_is_the_repo(tmp_path):
     cwd.mkdir()
     gate("snapshot", cwd, env)
     (tmp_path / ".claude").mkdir()
-    (tmp_path / ".claude" / "transcript.jsonl").write_text("{}\n")
+    (tmp_path / ".claude" / "transcript.jsonl").write_text("{}\n", encoding="utf-8")
     assert gate("check", cwd, env)[0] == 0
 
 
@@ -156,10 +159,12 @@ def test_lesson_in_main_checkout_counts_from_a_worktree(repo):
     r, env = repo
     wt = worktree(r, env)
     gate("snapshot", wt, env)
-    (wt / "b.txt").write_text("new\n")
+    (wt / "b.txt").write_text("new\n", encoding="utf-8")
     lessons = r / ".claude" / "lessons"
     lessons.mkdir(parents=True)
-    (lessons / f"{date.today():%Y-%m-%d}-topic.md").write_text("# lesson\n")
+    (lessons / f"{date.today():%Y-%m-%d}-topic.md").write_text(
+        "# lesson\n", encoding="utf-8"
+    )
     assert gate("check", wt, env) == (0, "")
 
 
@@ -167,15 +172,17 @@ def test_lesson_request_from_a_worktree_names_the_main_checkout(repo):
     r, env = repo
     wt = worktree(r, env)
     gate("snapshot", wt, env)
-    (wt / "b.txt").write_text("new\n")
+    (wt / "b.txt").write_text("new\n", encoding="utf-8")
     code, err = gate("check", wt, env)
     assert code == 2
-    assert f"{r.resolve()}/.claude/lessons/" in err
-    assert f"{wt.resolve()}/.claude/lessons" not in err
+    # The hook prints the path as git does (C:/x on Windows): compare the folders, not the text
+    named = re.search(r"write the lesson to (.+?)/\.claude/lessons/", err).group(1)
+    assert os.path.samefile(named, r)
+    assert not os.path.samefile(named, wt)
 
 
 def commit(path, env, name="b.txt", committer=None, author=None):
-    (path / name).write_text("new\n")
+    (path / name).write_text("new\n", encoding="utf-8")
     extra = {"GIT_COMMITTER_EMAIL": committer} if committer else {}
     if author:
         extra["GIT_AUTHOR_EMAIL"] = author
@@ -187,7 +194,7 @@ def commit(path, env, name="b.txt", committer=None, author=None):
 
 def test_lesson_quiet_when_moving_from_dirty_root_to_clean_worktree(repo):
     r, env = repo
-    (r / "a.txt").write_text("dirty at start\n")
+    (r / "a.txt").write_text("dirty at start\n", encoding="utf-8")
     gate("snapshot", r, env)
     wt = worktree(r, env)
     assert gate("check", wt, env) == (0, "")
@@ -254,8 +261,10 @@ def test_lesson_old_state_file_still_works(repo):
     r, env = repo
     gate("snapshot", r, env)
     state = r.parent / "claude-lesson-s1"
-    state.write_text(state.read_text().splitlines()[0] + "\n")
-    (r / "b.txt").write_text("new\n")
+    state.write_text(
+        state.read_text(encoding="utf-8").splitlines()[0] + "\n", encoding="utf-8"
+    )
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     assert gate("check", r, env)[0] == 2
 
 
@@ -263,7 +272,7 @@ def test_lesson_gate_is_off_without_the_opt_in_file(repo):
     r, env = repo
     (Path(env["HOME"]) / ".config" / "claude" / "lesson-gate").unlink()
     gate("snapshot", r, env)
-    (r / "b.txt").write_text("new\n")
+    (r / "b.txt").write_text("new\n", encoding="utf-8")
     assert gate("check", r, env) == (0, "")
 
 

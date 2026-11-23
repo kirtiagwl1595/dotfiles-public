@@ -22,8 +22,14 @@ pyrun -B "$(dirname "${BASH_SOURCE[0]}")/_loop.py" running "$cwd" "$sid" 2>/dev/
 cd "$cwd" 2>/dev/null || exit 0
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 # Other people's repos (read-only clones): their conftest would run outside the sandbox
-IFS=: read -ra skip_roots <<<"${CLAUDE_TEST_GATE_SKIP:-}"
-for prefix in ${skip_roots[@]+"${skip_roots[@]}"}; do # the + form: bash 3.2 fails on an empty array
+# The list splits on ":" (or ";"), but a Windows drive "C:" keeps its colon
+IFS=: read -ra skip_roots <<<"$(fwd "${CLAUDE_TEST_GATE_SKIP:-}" | tr ';' ':')"
+n=${#skip_roots[@]}
+for ((i = 0; i < n; i++)); do
+  prefix=${skip_roots[i]}
+  if [[ $prefix =~ ^[A-Za-z]$ && $((i + 1)) -lt $n ]]; then
+    prefix="$prefix:${skip_roots[++i]}"
+  fi
   [[ -n $prefix && $root == "${prefix%/}"/* ]] && exit 0
 done
 cd "$root" || exit 0

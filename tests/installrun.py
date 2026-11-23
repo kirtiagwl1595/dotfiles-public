@@ -31,7 +31,7 @@ def fake_tool(bin_dir, name):
         path.write_bytes(WINDOWS_STUB.encode())
     else:
         path = bin_dir / name
-        path.write_text(POSIX_STUB)
+        path.write_text(POSIX_STUB, encoding="utf-8")
         path.chmod(0o755)
     return path
 
@@ -45,7 +45,7 @@ def fake_managers(tmp_path, *names):
 
 def calls(tmp_path):
     log = tmp_path / "fake.log"
-    return log.read_text().splitlines() if log.exists() else []
+    return log.read_text(encoding="utf-8").splitlines() if log.exists() else []
 
 
 def run_install(

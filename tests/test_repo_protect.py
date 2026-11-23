@@ -24,9 +24,11 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def home(tmp_path, monkeypatch, machine_free_git):
-    (tmp_path / "ignore").write_text("**/.claude/settings.local.json\n")
+    (tmp_path / "ignore").write_text(
+        "**/.claude/settings.local.json\n", encoding="utf-8"
+    )
     config = f"[user]\n\tname = t\n\temail = t@t\n[core]\n\texcludesFile = {tmp_path / 'ignore'}\n"
-    (tmp_path / ".gitconfig").write_text(config)
+    (tmp_path / ".gitconfig").write_text(config, encoding="utf-8")
     monkeypatch.setenv("HOME", str(tmp_path))
     # conftest switches the global ignore off; this command depends on it
     monkeypatch.setenv("GIT_CONFIG_VALUE_1", str(tmp_path / "ignore"))
@@ -35,7 +37,7 @@ def home(tmp_path, monkeypatch, machine_free_git):
 
 def make(path):
     path.mkdir(parents=True)
-    (path / "a.txt").write_text("a\n")
+    (path / "a.txt").write_text("a\n", encoding="utf-8")
     git(path, "init", "-q", "-b", "main")
     git(path, "add", "-A")
     git(path, "commit", "-qm", "init")
@@ -53,7 +55,7 @@ def protect(path, mode="protect"):
 
 
 def deny_rules(repo):
-    text = (repo / ".claude/settings.local.json").read_text()
+    text = (repo / ".claude/settings.local.json").read_text(encoding="utf-8")
     return json.loads(text)["permissions"]["deny"]
 
 
@@ -86,14 +88,14 @@ def test_own_entries_stay_and_a_second_run_changes_nothing(home):
         "permissions": {"allow": ["Bash(make:*)"], "deny": ["Bash(x:*)"]},
         "model": "x",
     }
-    local.write_text(json.dumps(mine))
+    local.write_text(json.dumps(mine), encoding="utf-8")
     assert protect(repo).returncode == 0
-    once = local.read_text()
+    once = local.read_text(encoding="utf-8")
     merged = json.loads(once)
     assert merged["model"] == "x" and merged["permissions"]["allow"] == ["Bash(make:*)"]
     assert deny_rules(repo) == ["Bash(x:*)", *expected(repo)]
     assert protect(repo).returncode == 0
-    assert local.read_text() == once
+    assert local.read_text(encoding="utf-8") == once
 
 
 @pytest.mark.parametrize("place", ["git/app", "git/group/app"])
@@ -108,7 +110,7 @@ def test_a_repo_that_the_user_settings_cover_gets_no_file(home, place):
 
 def link_the_file(home, repo):
     (repo / ".claude").mkdir()
-    (home / "victim").write_text("{}")
+    (home / "victim").write_text("{}", encoding="utf-8")
     (repo / ".claude/settings.local.json").symlink_to(home / "victim")
 
 
@@ -119,16 +121,16 @@ def link_the_folder(home, repo):
 
 def bad_json(home, repo):
     (repo / ".claude").mkdir()
-    (repo / ".claude/settings.local.json").write_text("{not json")
+    (repo / ".claude/settings.local.json").write_text("{not json", encoding="utf-8")
 
 
 def not_ignored(home, repo):
-    (home / "ignore").write_text("")
+    (home / "ignore").write_text("", encoding="utf-8")
 
 
 def odd_shape(home, repo):
     (repo / ".claude").mkdir()
-    (repo / ".claude/settings.local.json").write_text("[]")
+    (repo / ".claude/settings.local.json").write_text("[]", encoding="utf-8")
 
 
 @pytest.mark.parametrize(
@@ -165,7 +167,7 @@ def test_the_bulk_run_protects_team_and_dirty_repos_and_plan_changes_nothing(
     monkeypatch.setenv("FORGE_GIT_USER", "me")
     team, dirty, broken = (make(home / "work" / n) for n in ("team", "dirty", "broken"))
     git(team, "remote", "add", "origin", "https://github.com/acme/team.git")
-    (dirty / "a.txt").write_text("changed\n")
+    (dirty / "a.txt").write_text("changed\n", encoding="utf-8")
     bad_json(home, broken)
 
     plan = protect(home / "work", "plan")

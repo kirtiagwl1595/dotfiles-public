@@ -63,11 +63,13 @@ def test_copied_bin_runs_alone(loop_env):
 
 # ── discover ────────────────────────────────────────────────────────────────
 def test_discover_runs_the_allowed_commands(loop_env):
-    (loop_env.wt / "CLAUDE.md").write_text(COMMANDS)
+    (loop_env.wt / "CLAUDE.md").write_text(COMMANDS, encoding="utf-8")
     copy_bin(loop_env.wt / ".loop/bin")
     p = loopctl(loop_env, "discover")
     assert p.returncode == 0, p.stderr
-    found = json.loads((loop_env.wt / ".loop/discovery.json").read_text())
+    found = json.loads(
+        (loop_env.wt / ".loop/discovery.json").read_text(encoding="utf-8")
+    )
     by_label = {c["label"]: c for c in found}
     assert by_label["Test"]["exit"] == 0
     assert by_label["Lint"]["exit"] == 0
@@ -85,10 +87,12 @@ REAL_LINES = """## Commands
 
 
 def test_discover_takes_the_label_at_the_start_of_each_part(loop_env):
-    (loop_env.wt / "CLAUDE.md").write_text(REAL_LINES)
+    (loop_env.wt / "CLAUDE.md").write_text(REAL_LINES, encoding="utf-8")
     copy_bin(loop_env.wt / ".loop/bin")
     assert loopctl(loop_env, "discover").returncode == 0
-    found = json.loads((loop_env.wt / ".loop/discovery.json").read_text())
+    found = json.loads(
+        (loop_env.wt / ".loop/discovery.json").read_text(encoding="utf-8")
+    )
     assert [(c["label"], c["command"]) for c in found] == [
         ("Review", "echo review"),
         ("Dry run of the setup", "echo check"),
@@ -102,13 +106,15 @@ def test_discover_takes_the_label_at_the_start_of_each_part(loop_env):
 def test_discover_reads_project_files(loop_env):
     wt = loop_env.wt
     (wt / "package.json").write_text(
-        json.dumps({"scripts": {"test": "x", "build": "y"}})
+        json.dumps({"scripts": {"test": "x", "build": "y"}}), encoding="utf-8"
     )
-    (wt / "Makefile").write_text("lint:\n\ttrue\nbuild:\n\ttrue\n")
-    (wt / "pyproject.toml").write_text("[project]\nname='x'\n[tool.ruff]\n")
+    (wt / "Makefile").write_text("lint:\n\ttrue\nbuild:\n\ttrue\n", encoding="utf-8")
+    (wt / "pyproject.toml").write_text(
+        "[project]\nname='x'\n[tool.ruff]\n", encoding="utf-8"
+    )
     copy_bin(wt / ".loop/bin")
     loopctl(loop_env, "discover")
-    found = json.loads((wt / ".loop/discovery.json").read_text())
+    found = json.loads((wt / ".loop/discovery.json").read_text(encoding="utf-8"))
     commands = {c["command"] for c in found}
     assert {"npm run test", "make lint", "uv run ruff check ."} <= commands
     assert not {"npm run build", "make build"} & commands
@@ -120,12 +126,15 @@ def test_discover_names_a_denied_read_outside_the_worktree(loop_env):
     (wt / "fail.sh").write_text(
         f"echo 'error: failed to open file `{outside}`: Operation not permitted (os error 1)'\n"
         f"echo 'warning: `{wt}/x`: Operation not permitted'\n"
-        "exit 2\n"
+        "exit 2\n",
+        encoding="utf-8",
     )
-    (wt / "CLAUDE.md").write_text("## Commands\n- Test: `sh fail.sh`\n")
+    (wt / "CLAUDE.md").write_text(
+        "## Commands\n- Test: `sh fail.sh`\n", encoding="utf-8"
+    )
     copy_bin(wt / ".loop/bin")
     p = loopctl(loop_env, "discover")
-    found = json.loads((wt / ".loop/discovery.json").read_text())
+    found = json.loads((wt / ".loop/discovery.json").read_text(encoding="utf-8"))
     assert found[0]["exit"] == 2 and found[0]["outside_reads"] == [str(outside)]
     assert str(outside) in p.stdout and "repo-task.md" in p.stdout
 
@@ -179,7 +188,7 @@ def test_verify_caps_output_and_keeps_the_evidence_line(loop_env):
 
 def test_verify_stops_on_a_protected_change(loop_env):
     confirm(loop_env)
-    (loop_env.wt / "tests/test_tool.py").write_text("x = 1\n")
+    (loop_env.wt / "tests/test_tool.py").write_text("x = 1\n", encoding="utf-8")
     p = loopctl(loop_env, "verify")
     assert p.returncode == 2
     assert "tests/test_tool.py" in p.stderr and _loop.EVIDENCE_TAG not in p.stdout
@@ -233,8 +242,10 @@ def skill(loop_env, monkeypatch):
     evals = loop_env.wt / "claude/evals"
     (evals / "demo-case/graders").mkdir(parents=True)
     for g in ("one-rule", "skill-fired"):
-        (evals / f"demo-case/graders/{g}.md").write_text("---\ntype: llm\n---\n")
-    (evals / "run.sh").write_text(STUB)
+        (evals / f"demo-case/graders/{g}.md").write_text(
+            "---\ntype: llm\n---\n", encoding="utf-8"
+        )
+    (evals / "run.sh").write_text(STUB, encoding="utf-8")
     calls = loop_env.tmp / "calls.txt"
     monkeypatch.setenv("STUB_CALLS", str(calls))
 
@@ -243,7 +254,7 @@ def skill(loop_env, monkeypatch):
             monkeypatch.delenv("STUB_RESULT", raising=False)
             return
         path = loop_env.tmp / "result.json"
-        path.write_text(json.dumps(result))
+        path.write_text(json.dumps(result), encoding="utf-8")
         monkeypatch.setenv("STUB_RESULT", str(path))
 
     loop_env.set_result = set_result
@@ -263,10 +274,10 @@ def test_a_grader_passes_in_2_of_3_runs(skill):
     ev = evidence(p.stdout)
     assert ev["checks"] == [{"id": "one-rule", "exit": 0}, {"id": "fires", "exit": 1}]
     assert "FAIL fires" in p.stdout and "1 of 3" in p.stdout
-    args = skill.calls.read_text().split()
+    args = skill.calls.read_text(encoding="utf-8").split()
     assert args[:6] == ["--case", "demo-case", "--ablation", "none", "--runs", "3"]
     # A stuck loop verifies up to 5 times: each eval gets a small cost cap (G5)
-    assert (skill.tmp / "calls.txt.usd").read_text().split() == ["3"]
+    assert (skill.tmp / "calls.txt.usd").read_text(encoding="utf-8").split() == ["3"]
 
 
 @pytest.mark.parametrize("plugin", ["claude", "claude/plugins/writing-skills"])
@@ -280,7 +291,7 @@ def test_the_eval_runs_against_the_plugin_that_holds_the_case(skill, plugin):
     skill.set_result(aggregate({"one-rule": [True] * 3, "skill-fired": [True] * 3}))
     p = loopctl(skill, "verify")
     assert p.returncode == 0, p.stderr
-    args = skill.calls.read_text().split()
+    args = skill.calls.read_text(encoding="utf-8").split()
     assert Path(args[args.index("--plugin") + 1]) == (skill.wt / plugin).resolve()
 
 
@@ -312,7 +323,7 @@ def test_one_eval_run_serves_every_grader_and_shell_checks_still_run(skill):
     )
     ev = evidence(loopctl(skill, "verify").stdout)
     assert [c["exit"] for c in ev["checks"]] == [0, 0, 0]
-    assert len(skill.calls.read_text().splitlines()) == 1
+    assert len(skill.calls.read_text(encoding="utf-8").splitlines()) == 1
 
 
 def test_a_run_with_an_error_counts_as_a_fail(skill):
@@ -331,7 +342,10 @@ def test_an_old_result_never_counts_again(skill):
     assert p.returncode == 2 and "no result" in p.stderr
     assert _loop.EVIDENCE_TAG not in p.stdout
     # Each eval writes to its own new folder: a late writer cannot fill the next one
-    first, second = (line.split()[-1] for line in skill.calls.read_text().splitlines())
+    first, second = (
+        line.split()[-1]
+        for line in skill.calls.read_text(encoding="utf-8").splitlines()
+    )
     assert first != second and ".loop/eval/" in second
 
 
@@ -345,7 +359,7 @@ def test_the_bundle_adds_up_the_eval_spend(skill):
         skill.set_result({**result, "costUsd": cost})
         loopctl(skill, "verify")
     loopctl(skill, "bundle")
-    text = (skill.wt / ".loop/bundle.md").read_text()
+    text = (skill.wt / ".loop/bundle.md").read_text(encoding="utf-8")
     assert "Eval spend: $1.00 in 3 eval runs" in text, text
 
 
@@ -413,10 +427,10 @@ def test_status(loop_env):
 
 def test_bundle_writes_every_section_and_names_the_ones_to_fill(loop_env):
     confirm(loop_env)
-    (loop_env.wt / "tool.sh").write_text("echo ok\n")
+    (loop_env.wt / "tool.sh").write_text("echo ok\n", encoding="utf-8")
     git(loop_env.wt, "commit", "-qam", "loop(demo) #1: fix")
     p = loopctl(loop_env, "bundle")
-    text = (loop_env.wt / ".loop/bundle.md").read_text()
+    text = (loop_env.wt / ".loop/bundle.md").read_text(encoding="utf-8")
     assert p.returncode == 1
     assert all(f"## {s}" in text for s in _loop.BUNDLE_SECTIONS)
     assert "tool.sh" in text and "loop(demo) #1: fix" in text
@@ -431,12 +445,12 @@ def test_bundle_writes_every_section_and_names_the_ones_to_fill(loop_env):
 def test_bundle_shows_the_causes_and_not_the_template_hint(loop_env):
     # Pilots 1 and 2: the hint inside the template's HTML comment reached the bundle
     confirm(loop_env)
-    template = (CLAUDE / "templates/loop/loop-progress.md").read_text()
+    template = (CLAUDE / "templates/loop/loop-progress.md").read_text(encoding="utf-8")
     (loop_env.wt / ".loop/loop-progress.md").write_text(
-        template + "\n" + PROGRESS.format(n=1)
+        template + "\n" + PROGRESS.format(n=1), encoding="utf-8"
     )
     loopctl(loop_env, "bundle")
-    text = (loop_env.wt / ".loop/bundle.md").read_text()
+    text = (loop_env.wt / ".loop/bundle.md").read_text(encoding="utf-8")
     causes = [x for x in text.splitlines() if x.startswith("Cause:")]
     assert causes == ["Cause: tool.sh prints the wrong word."], causes
 
@@ -445,10 +459,13 @@ def test_bundle_keeps_what_the_agent_filled(loop_env):
     confirm(loop_env)
     loopctl(loop_env, "bundle")
     path = loop_env.wt / ".loop/bundle.md"
-    path.write_text(path.read_text().replace(_loop.FILL, "written"))
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(_loop.FILL, "written"),
+        encoding="utf-8",
+    )
     p = loopctl(loop_env, "bundle")
     assert p.returncode == 0, p.stdout
-    assert _loop.missing_sections(path.read_text()) == []
+    assert _loop.missing_sections(path.read_text(encoding="utf-8")) == []
 
 
 @pytest.mark.parametrize(
@@ -465,10 +482,12 @@ def test_bundle_keeps_what_the_agent_filled(loop_env):
 def test_bundle_shows_the_tokens_and_the_usage_stop(loop_env, usage, usage_stop, shown):
     confirm(loop_env)
     path = loop_env.wt / ".loop/run.json"
-    run = json.loads(path.read_text())
-    path.write_text(json.dumps({**run, "usage": usage, "usage_stop": usage_stop}))
+    run = json.loads(path.read_text(encoding="utf-8"))
+    path.write_text(
+        json.dumps({**run, "usage": usage, "usage_stop": usage_stop}), encoding="utf-8"
+    )
     loopctl(loop_env, "bundle")
-    text = (loop_env.wt / ".loop/bundle.md").read_text()
+    text = (loop_env.wt / ".loop/bundle.md").read_text(encoding="utf-8")
     section = text.split("## Iterations and tokens\n", 1)[1].split("\n## ", 1)[0]
     assert all(s in section for s in shown), section
     assert "Eval spend" not in section  # a script loop runs no eval
@@ -504,10 +523,12 @@ def test_audit_lists_what_has_a_verifier_and_changes_nothing(loop_env):
     repo = loop_env.main
     for rel, text in AUDIT_FILES.items():
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-        (repo / rel).write_text(text)
+        (repo / rel).write_text(text, encoding="utf-8")
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "add")
-    (repo / "scripts/install.sh").write_text(AUDIT_FILES["scripts/install.sh"] + "#\n")
+    (repo / "scripts/install.sh").write_text(
+        AUDIT_FILES["scripts/install.sh"] + "#\n", encoding="utf-8"
+    )
     git(repo, "commit", "-qam", "again")
     before = sorted(str(p) for p in repo.rglob("*") if ".git" not in p.parts)
 
@@ -576,8 +597,10 @@ def test_the_stop_hook_judges_a_grader_spec(skill):
     skill.set_result(aggregate({"one-rule": [False] * 3}))
     record(skill, loopctl(skill, "verify").stdout)
     assert blocked_by(stop(skill))  # row 8a: the routine for iteration 1
-    (skill.wt / ".loop/loop-progress.md").write_text(PROGRESS.format(n=1))
-    (skill.wt / "tool.sh").write_text("echo ok\n")
+    (skill.wt / ".loop/loop-progress.md").write_text(
+        PROGRESS.format(n=1), encoding="utf-8"
+    )
+    (skill.wt / "tool.sh").write_text("echo ok\n", encoding="utf-8")
     skill.set_result(aggregate({"one-rule": [True] * 3}))
     record(skill, loopctl(skill, "verify").stdout)
     out = stop(skill)

@@ -144,7 +144,7 @@ def test_install_runs_on_yes(tmp_path):
     home = tmp_path / "home"
     home.mkdir()
     _code, _out = run(home, stubs(tmp_path, brew=recorder(log)), answers="y\n")
-    assert "brew install --cask claude-code" in log.read_text()
+    assert "brew install --cask claude-code" in log.read_text(encoding="utf-8")
 
 
 @posix_only

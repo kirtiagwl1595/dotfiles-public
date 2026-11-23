@@ -117,10 +117,12 @@ def loop_env(tmp_path, monkeypatch, machine_free_git):
     main = tmp_path / "main"
     main.mkdir()
     git(main, "init", "-q", "-b", "main")
-    (main / "tool.sh").write_text("echo no\n")
-    (main / "keep.txt").write_text("keep\n")
+    (main / "tool.sh").write_text("echo no\n", encoding="utf-8")
+    (main / "keep.txt").write_text("keep\n", encoding="utf-8")
     (main / "tests").mkdir()
-    (main / "tests/test_tool.py").write_text("def test_x():\n    assert True\n")
+    (main / "tests/test_tool.py").write_text(
+        "def test_x():\n    assert True\n", encoding="utf-8"
+    )
     git(main, "add", "-A")
     git(main, "commit", "-q", "-m", "init")
     wt = tmp_path / "wt"
@@ -135,8 +137,10 @@ def team_origin(env):
 
 def write_loop_files(wt, loop_md=LOOP_MD, features=FEATURES):
     (wt / ".loop").mkdir(exist_ok=True)
-    (wt / ".loop/LOOP.md").write_text(loop_md)
-    (wt / ".loop/loop-features.json").write_text(json.dumps(features, indent=2))
+    (wt / ".loop/LOOP.md").write_text(loop_md, encoding="utf-8")
+    (wt / ".loop/loop-features.json").write_text(
+        json.dumps(features, indent=2), encoding="utf-8"
+    )
 
 
 def personal(home, path):
@@ -144,7 +148,7 @@ def personal(home, path):
     cfg = Path(home) / ".config/claude"
     cfg.mkdir(parents=True, exist_ok=True)
     rules = [{"path": str(path), "profile": "personal"}]
-    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules))
+    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules), encoding="utf-8")
 
 
 def own_repos_are_personal(home):
@@ -152,7 +156,7 @@ def own_repos_are_personal(home):
     cfg = Path(home) / ".config/claude"
     cfg.mkdir(parents=True, exist_ok=True)
     rules = [{"owner": "self", "profile": "personal"}]
-    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules))
+    (cfg / "loop-profiles.local.json").write_text(json.dumps(rules), encoding="utf-8")
 
 
 def copy_bin(dest):
@@ -173,7 +177,8 @@ def loop_running(home, worktree, session="s1"):
     path.parent.mkdir(parents=True, exist_ok=True)
     real = str(Path(worktree).resolve())
     path.write_text(
-        json.dumps({"worktree": real, "status": "running", "session_id": session})
+        json.dumps({"worktree": real, "status": "running", "session_id": session}),
+        encoding="utf-8",
     )
 
 
@@ -181,7 +186,7 @@ def broken_hooks(tmp):
     """A copy of the hooks whose _loop.py crashes: the gates must then run as before."""
     copy = Path(tmp) / "broken-hooks"
     shutil.copytree(HOOKS, copy)
-    (copy / "_loop.py").write_text("raise SystemExit(3)\n")
+    (copy / "_loop.py").write_text("raise SystemExit(3)\n", encoding="utf-8")
     return copy
 
 

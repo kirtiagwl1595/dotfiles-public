@@ -246,7 +246,7 @@ def test_skill_verifier_may_leave_the_sandbox_in_the_personal_profile(loop_env):
 
 def test_verifier_with_a_changed_bin_is_denied(loop_env):
     with_baseline(loop_env)
-    (loop_env.wt / ".loop/bin/json.py").write_text("x")
+    (loop_env.wt / ".loop/bin/json.py").write_text("x", encoding="utf-8")
     out = call(loop_env, "Bash", command=VERIFY)
     assert denied(out) and ".loop/bin" in out["permissionDecisionReason"]
 
@@ -299,7 +299,7 @@ def test_a_forge_that_is_not_ours_is_denied(loop_env):
         loop_env.tmp / ".claude/plugins/cache/dotfiles-public/safe-lean/9.9.9/forge.sh"
     )
     fake.parent.mkdir(parents=True)
-    fake.write_text("echo hi\n")
+    fake.write_text("echo hi\n", encoding="utf-8")
     assert denied(call(loop_env, "Bash", hook=GUARD, command=f"bash {fake} whoami"))
 
 
@@ -426,7 +426,7 @@ TERMS = HOOKS / "guard_private_terms.py"
 @pytest.fixture
 def terms(loop_env, monkeypatch):
     path = loop_env.tmp / "terms.txt"
-    path.write_text("acme-corp\n")
+    path.write_text("acme-corp\n", encoding="utf-8")
     monkeypatch.setenv("PRIVATE_TERMS_FILE", str(path))
 
 

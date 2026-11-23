@@ -28,7 +28,7 @@ pytestmark = pytest.mark.skipif(
 
 def stub(path, body):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(body)
+    path.write_text(body, encoding="utf-8")
     path.chmod(0o755)
     return path
 
@@ -121,7 +121,7 @@ def jena(tmp_path):
     archive = jena_tarball()
     (fixtures / ARCHIVE).write_bytes(archive)
     (fixtures / f"{ARCHIVE}.sha512").write_text(
-        f"{hashlib.sha512(archive).hexdigest()}  {ARCHIVE}\n"
+        f"{hashlib.sha512(archive).hexdigest()}  {ARCHIVE}\n", encoding="utf-8"
     )
     return {
         **{k: v for k, v in os.environ.items() if k not in ("JAVA_HOME", "CURL_LOG")},
@@ -151,7 +151,7 @@ def test_jena_install_puts_working_wrappers_on_bin(jena):
     for tool in TOOLS:
         wrapper = Path(jena["HOME"]) / ".local/bin" / tool
         assert os.access(wrapper, os.X_OK), tool
-        assert jena["JAVA_HOME_CMD"] in wrapper.read_text()
+        assert jena["JAVA_HOME_CMD"] in wrapper.read_text(encoding="utf-8")
     assert f"VERSION: {VERSION}" in out
 
 
@@ -165,7 +165,7 @@ def test_jena_dry_run_writes_and_downloads_nothing(jena):
 
 def test_jena_checksum_mismatch_installs_nothing(jena):
     sha = Path(jena["FIXTURES"], f"{ARCHIVE}.sha512")
-    sha.write_text("0" * 128 + "\n")
+    sha.write_text("0" * 128 + "\n", encoding="utf-8")
     code, out = jena_run(jena)
     assert code == 1 and "Checksum mismatch" in out
     assert jena_installed(jena) == ([], [])
@@ -198,7 +198,7 @@ def test_jena_broken_archive_leaves_no_partial_install(jena):
     junk = b"not a tarball"
     Path(jena["FIXTURES"], ARCHIVE).write_bytes(junk)
     Path(jena["FIXTURES"], f"{ARCHIVE}.sha512").write_text(
-        hashlib.sha512(junk).hexdigest() + "\n"
+        hashlib.sha512(junk).hexdigest() + "\n", encoding="utf-8"
     )
     code, out = jena_run(jena)
     assert code != 0, out
@@ -218,7 +218,7 @@ def test_jena_wrapper_finds_java_in_a_path_with_spaces(jena, tmp_path):
 def test_jena_failed_swap_keeps_the_old_install(jena):
     old = Path(jena["HOME"], f".local/share/jena-{VERSION}")
     old.mkdir(parents=True)
-    (old / "marker").write_text("old install")
+    (old / "marker").write_text("old install", encoding="utf-8")
     stubs = jena["PATH"].split(":")[0]
     stub(
         Path(stubs, "mv"),
@@ -226,7 +226,7 @@ def test_jena_failed_swap_keeps_the_old_install(jena):
     )
     code, out = jena_run(jena)
     assert code == 1, out
-    assert (old / "marker").read_text() == "old install"
+    assert (old / "marker").read_text(encoding="utf-8") == "old install"
 
 
 def test_jena_has_a_windows_script_that_checks_the_download():
@@ -331,7 +331,7 @@ def test_macos_defaults_saves_each_domain_before_it_writes(tmp_path):
     code, out = sh([BASH, str(SCRIPTS / "macos-defaults.sh")], env=env)
     assert code == 0, out
     exported = set()
-    for call in log.read_text().splitlines():
+    for call in log.read_text(encoding="utf-8").splitlines():
         words = call.split()
         if words[:2] == ["defaults", "export"]:
             exported.add(words[2])
@@ -353,7 +353,8 @@ def names_manifest(tmp_path, names):
                 "groups": {"g": {"title": "g", "packages": pkgs}},
                 "profiles": {"p": {"description": "p", "groups": ["g"]}},
             }
-        )
+        ),
+        encoding="utf-8",
     )
     return path
 
@@ -427,7 +428,7 @@ def make_repo(path):
     (path / "scripts").mkdir()
     for name in ("make-bundle.sh", "import-bundle.sh"):
         shutil.copy(SCRIPTS / name, path / "scripts" / name)
-    (path / "a.txt").write_text("one\n")
+    (path / "a.txt").write_text("one\n", encoding="utf-8")
     git(path, "add", ".")
     git(path, "commit", "-q", "-m", "first")
     return path
@@ -465,7 +466,7 @@ def bundle_scene(tmp_path):
     target = tmp_path / "target"
     git(tmp_path, "clone", "-q", str(source), str(target))
     git(target, "remote", "remove", "origin")
-    (source / "a.txt").write_text("two\n")
+    (source / "a.txt").write_text("two\n", encoding="utf-8")
     git(source, "commit", "-qam", "second")
     downloads = tmp_path / "dl"
     downloads.mkdir()
@@ -486,20 +487,20 @@ def test_import_bundle_fast_forwards_main_and_removes_the_bundle(tmp_path):
         env=import_env(tmp_path, target, downloads),
     )
     assert code == 0, out
-    assert (target / "a.txt").read_text() == "two\n"
+    assert (target / "a.txt").read_text(encoding="utf-8") == "two\n"
     assert not list(downloads.glob("*.bundle"))
 
 
 def test_import_bundle_stops_on_a_dirty_repo_and_keeps_the_bundle(tmp_path):
     _, target, downloads = bundle_scene(tmp_path)
-    (target / "a.txt").write_text("mine\n")
+    (target / "a.txt").write_text("mine\n", encoding="utf-8")
     code, out = sh(
         [BASH, str(target / "scripts" / "import-bundle.sh")],
         env=import_env(tmp_path, target, downloads),
     )
     assert code == 1 and "uncommitted" in out
     assert list(downloads.glob("*.bundle"))
-    assert (target / "a.txt").read_text() == "mine\n"
+    assert (target / "a.txt").read_text(encoding="utf-8") == "mine\n"
 
 
 def test_import_bundle_asks_before_it_changes_anything_without_a_terminal(tmp_path):
@@ -510,7 +511,7 @@ def test_import_bundle_asks_before_it_changes_anything_without_a_terminal(tmp_pa
         [BASH, str(target / "scripts" / "import-bundle.sh")], env=env, stdin=""
     )
     assert code == 1 and "no terminal" in out
-    assert (target / "a.txt").read_text() == "one\n"
+    assert (target / "a.txt").read_text(encoding="utf-8") == "one\n"
 
 
 # ── skill-zip.sh ────────────────────────────────────────────────────────────
@@ -521,8 +522,8 @@ def skill_scene(tmp_path):
         shutil.copy(SCRIPTS / name, root / "scripts" / name)
     skill = root / "claude" / "skills" / "demo"
     skill.mkdir(parents=True)
-    (skill / "SKILL.md").write_text("---\nname: demo\n---\n")
-    (skill / ".DS_Store").write_text("x")
+    (skill / "SKILL.md").write_text("---\nname: demo\n---\n", encoding="utf-8")
+    (skill / ".DS_Store").write_text("x", encoding="utf-8")
     return root
 
 
@@ -552,13 +553,13 @@ def backup_scene(tmp_path, with_recipients=True):
     home, dest, bin_dir = tmp_path / "home", tmp_path / "dest", tmp_path / "bin"
     for d in (home / "docs", home / "node_modules", home / ".cache", dest):
         d.mkdir(parents=True)
-    (home / "docs" / "a.txt").write_text("keep")
-    (home / "node_modules" / "b.js").write_text("skip")
-    (home / ".cache" / "c").write_text("skip")
+    (home / "docs" / "a.txt").write_text("keep", encoding="utf-8")
+    (home / "node_modules" / "b.js").write_text("skip", encoding="utf-8")
+    (home / ".cache" / "c").write_text("skip", encoding="utf-8")
     stub(bin_dir / "age", FAKE_AGE)
     recipients = tmp_path / "recipients.txt"
     if with_recipients:
-        recipients.write_text("age1examplepublickey\n")
+        recipients.write_text("age1examplepublickey\n", encoding="utf-8")
     env = {
         **os.environ,
         "HOME": str(home),

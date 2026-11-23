@@ -73,7 +73,7 @@ def _scripts_hooks_run(path, data):
     for rel in ["hooks/hooks.json", *_custom_hook_paths(data)]:
         if f := _inside(path, rel):
             try:
-                configs.append(json.loads(f.read_text()))
+                configs.append(json.loads(f.read_text(encoding="utf-8")))
             except ValueError:
                 continue  # the raw bytes are hashed already
     rels = {
@@ -100,7 +100,7 @@ def hash_plugin(path):
     data = {}
     if manifest.is_file():
         try:
-            data = json.loads(manifest.read_text())
+            data = json.loads(manifest.read_text(encoding="utf-8"))
         except ValueError:
             data = {}
         for key in ("hooks", "mcpServers"):
@@ -149,7 +149,7 @@ def collect(cache, only=None):
 def read_lock(lockfile):
     lock = {}
     if lockfile.is_file():
-        for line in lockfile.read_text().splitlines():
+        for line in lockfile.read_text(encoding="utf-8").splitlines():
             fields = line.split()
             if len(fields) == 2 and not line.startswith("#"):
                 lock[fields[0]] = fields[1]
@@ -180,7 +180,7 @@ def main(argv):
             kept = read_lock(lockfile) if only is not None and lockfile.exists() else {}
             merged = {**kept, **now}
             lines = "".join(f"{k} {v}\n" for k, v in sorted(merged.items()))
-            lockfile.write_text(HEADER + lines)
+            lockfile.write_text(HEADER + lines, encoding="utf-8")
             print(f"wrote {len(now)} entries to {lockfile}")
             return 0
         lock = read_lock(lockfile)
