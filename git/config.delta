@@ -1,0 +1,8 @@
+# delta as the git pager. install.py includes this file only when you say yes and delta is installed.
+[core]
+	pager = delta
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true          # n / N jump between files
+	line-numbers = true

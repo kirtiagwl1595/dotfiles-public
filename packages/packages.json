@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "comment": "One list of packages for macOS (brew), Linux (apt-get) and Windows (winget). A null manager has a note. 'cask:' means a Homebrew cask. install.py reads this file; scripts/check-package-names.sh checks the names.",
+  "groups": {
+    "essentials": {"title": "Git, GitHub CLI, uv, starship prompt, jq", "packages": [
+      {"name": "git", "brew": "git", "apt": "git", "winget": "Git.Git", "desc": "version control"},
+      {"name": "gh", "brew": "gh", "apt": "gh", "winget": "GitHub.cli", "desc": "GitHub command line"},
+      {"name": "uv", "brew": "uv", "apt": null, "winget": "astral-sh.uv", "desc": "Python packages and virtual environments", "note": "apt: not in the Debian or Ubuntu archive; use brew or https://docs.astral.sh/uv/"},
+      {"name": "starship", "brew": "starship", "apt": null, "winget": "Starship.Starship", "desc": "fast shell prompt", "note": "apt: only in new Ubuntu releases; use brew or https://starship.rs"},
+      {"name": "jq", "brew": "jq", "apt": "jq", "winget": "jqlang.jq", "desc": "JSON on the command line (the status line needs it)"}
+    ]},
+    "core-cli": {"title": "More Git tools and a Node version manager", "packages": [
+      {"name": "git-lfs", "brew": "git-lfs", "apt": "git-lfs", "winget": "GitHub.GitLFS", "desc": "large files in git"},
+      {"name": "glab", "brew": "glab", "apt": null, "winget": "GLab.GLab", "desc": "GitLab command line (gitlab.com or a company server)", "note": "apt: not in the archive of older releases; use brew or the GitLab release page"},
+      {"name": "fnm", "brew": "fnm", "apt": null, "winget": "Schniz.fnm", "desc": "Node version manager", "note": "apt: not in the archive; use brew or winget"},
+      {"name": "git-delta", "brew": "git-delta", "apt": "git-delta", "winget": "dandavison.delta", "desc": "git pager with syntax colours (git/config.delta)"},
+      {"name": "lazygit", "brew": "lazygit", "apt": null, "winget": "JesseDuffield.lazygit", "desc": "git in a terminal UI", "note": "apt: only in new Ubuntu releases; use brew or winget"}
+    ]},
+    "shell": {"title": "Shell quality of life: search, listing, history", "packages": [
+      {"name": "zsh-autosuggestions", "brew": "zsh-autosuggestions", "apt": "zsh-autosuggestions", "winget": null, "desc": "suggests commands from history", "note": "winget: a zsh plugin; Windows uses PSReadLine instead"},
+      {"name": "zsh-syntax-highlighting", "brew": "zsh-syntax-highlighting", "apt": "zsh-syntax-highlighting", "winget": null, "desc": "colours the command line while you type", "note": "winget: a zsh plugin; Windows uses PSReadLine instead"},
+      {"name": "zsh-history-substring-search", "brew": "zsh-history-substring-search", "apt": "zsh-history-substring-search", "winget": null, "desc": "Up and Down search history for what you typed", "note": "winget: a zsh plugin; Windows uses PSReadLine instead"},
+      {"name": "fzf", "brew": "fzf", "apt": "fzf", "winget": "junegunn.fzf", "desc": "fuzzy finder (Ctrl+R, Ctrl+T)"},
+      {"name": "zoxide", "brew": "zoxide", "apt": "zoxide", "winget": "ajeetdsouza.zoxide", "desc": "jump to a folder with z"},
+      {"name": "eza", "brew": "eza", "apt": "eza", "winget": "eza-community.eza", "desc": "ls with colours and git status", "note": "apt: only in new Ubuntu and Debian releases; the install reports it if missing"},
+      {"name": "bat", "brew": "bat", "apt": "bat", "winget": "sharkdp.bat", "desc": "cat with syntax colours", "note": "apt: the program is called batcat; the shell config handles that"},
+      {"name": "ripgrep", "brew": "ripgrep", "apt": "ripgrep", "winget": "BurntSushi.ripgrep.MSVC", "desc": "fast text search"},
+      {"name": "fd", "brew": "fd", "apt": "fd-find", "winget": "sharkdp.fd", "desc": "fast file search", "note": "apt: the program is called fdfind; the shell config handles that"}
+    ]},
+    "dev-checks": {"title": "Archive, secret scan and shell lint tools", "packages": [
+      {"name": "sevenzip", "brew": "sevenzip", "apt": "7zip", "winget": "7zip.7zip", "desc": "7z archives (the extract function uses 7zz)"},
+      {"name": "gitleaks", "brew": "gitleaks", "apt": null, "winget": "Gitleaks.Gitleaks", "desc": "finds secrets in git history", "note": "apt: not in the archive of older releases; use brew, winget or the GitHub release"},
+      {"name": "shellcheck", "brew": "shellcheck", "apt": "shellcheck", "winget": "koalaman.shellcheck", "desc": "lints shell scripts"},
+      {"name": "openssl@3", "brew": "openssl@3", "apt": null, "winget": null, "desc": "needed to build some Python packages from source on macOS", "note": "only for macOS source builds; Linux uses libssl-dev and Windows has wheels"}
+    ]},
+    "data-utils": {"title": "YAML, PDF, image and Office tools", "packages": [
+      {"name": "yq", "brew": "yq", "apt": null, "winget": "MikeFarah.yq", "desc": "YAML on the command line", "note": "apt: the yq package is a different tool; use brew or winget"},
+      {"name": "ccusage", "brew": "ccusage", "apt": null, "winget": null, "desc": "Claude Code token use", "note": "run it with npx ccusage where no package exists"},
+      {"name": "poppler", "brew": "poppler", "apt": "poppler-utils", "winget": "oschwartz10612.Poppler", "desc": "pdftoppm and pdftocairo: PDF pages to images"},
+      {"name": "imagemagick", "brew": "imagemagick", "apt": "imagemagick", "winget": "ImageMagick.ImageMagick", "desc": "magick and montage: image work"},
+      {"name": "libreoffice", "brew": "cask:libreoffice", "apt": "libreoffice", "winget": "TheDocumentFoundation.LibreOffice", "desc": "headless Office to PDF (large download)"},
+      {"name": "powershell", "brew": "powershell", "apt": null, "winget": "Microsoft.PowerShell", "desc": "pwsh: run and test .ps1 scripts", "note": "apt: needs the Microsoft repository; see learn.microsoft.com/powershell"}
+    ]},
+    "fonts": {"title": "A terminal font with icons", "packages": [
+      {"name": "jetbrains-mono-nerd-font", "brew": "cask:font-jetbrains-mono-nerd-font", "apt": null, "winget": "DEVCOM.JetBrainsMonoNerdFont", "desc": "JetBrains Mono with the prompt icons", "note": "apt: download the font from nerdfonts.com and copy it to ~/.local/share/fonts"}
+    ]},
+    "utilities": {"title": "Everyday command line tools", "packages": [
+      {"name": "tree", "brew": "tree", "apt": "tree", "winget": null, "desc": "folder tree", "note": "winget: Windows has a built-in tree command"},
+      {"name": "htop", "brew": "htop", "apt": "htop", "winget": null, "desc": "process viewer", "note": "winget: no equivalent; use Task Manager"},
+      {"name": "wget", "brew": "wget", "apt": "wget", "winget": "JernejSimoncic.Wget", "desc": "download files"},
+      {"name": "pandoc", "brew": "pandoc", "apt": "pandoc", "winget": "JohnMacFarlane.Pandoc", "desc": "convert documents between formats"},
+      {"name": "duckdb", "brew": "duckdb", "apt": null, "winget": "DuckDB.cli", "desc": "SQL on local files", "note": "apt: not in the archive; use brew, winget or the DuckDB release"},
+      {"name": "hf", "brew": "hf", "apt": null, "winget": null, "desc": "Hugging Face Hub command line", "note": "apt and winget: install with uv tool install huggingface_hub"},
+      {"name": "tealdeer", "brew": "tealdeer", "apt": "tealdeer", "winget": "dbrgn.tealdeer", "desc": "tldr: short command examples"},
+      {"name": "age", "brew": "age", "apt": "age", "winget": "FiloSottile.age", "desc": "file encryption (scripts/backup-home.sh uses it)"}
+    ]},
+    "apps": {"title": "Desktop apps", "packages": [
+      {"name": "iterm2", "brew": "cask:iterm2", "apt": null, "winget": null, "desc": "terminal for macOS", "note": "macOS only; Windows has Windows Terminal, Linux has its own terminal"},
+      {"name": "visual-studio-code", "brew": "cask:visual-studio-code", "apt": null, "winget": "Microsoft.VisualStudioCode", "desc": "code editor", "note": "apt: needs the Microsoft repository; see code.visualstudio.com"},
+      {"name": "sublime-text", "brew": "cask:sublime-text", "apt": null, "winget": "SublimeHQ.SublimeText.4", "desc": "text editor", "note": "apt: needs the Sublime repository; see sublimetext.com"},
+      {"name": "orbstack", "brew": "cask:orbstack", "apt": null, "winget": null, "desc": "fast containers and Linux machines", "note": "macOS only; use Docker Desktop or Podman elsewhere"},
+      {"name": "temurin", "brew": "cask:temurin", "apt": null, "winget": "EclipseAdoptium.Temurin.21.JDK", "desc": "free Java (runs Jena from scripts/install-jena.sh)", "note": "apt: add the Adoptium repository; see adoptium.net"},
+      {"name": "ollama", "brew": "cask:ollama-app", "apt": null, "winget": "Ollama.Ollama", "desc": "run language models on this computer", "note": "apt: use the install script from ollama.com"}
+    ]},
+    "work-extras": {"title": "Tools for a work laptop", "packages": [
+      {"name": "drawio", "brew": "cask:drawio", "apt": null, "winget": "JGraph.Draw", "desc": "draw.io desktop; its CLI exports diagrams to SVG and PNG", "note": "apt: download the .deb from the draw.io desktop release page"}
+    ]}
+  },
+  "profiles": {
+    "minimal": {"description": "Git, GitHub CLI, uv, starship, jq", "groups": ["essentials"]},
+    "developer": {"description": "Minimal plus shell tools, Git helpers, data utilities and a font", "extends": "minimal", "groups": ["core-cli", "shell", "dev-checks", "data-utils", "fonts"]},
+    "full": {"description": "Developer plus everyday tools and desktop apps", "extends": "developer", "groups": ["utilities", "apps"]},
+    "work": {"description": "Developer plus tools for a work laptop", "extends": "developer", "groups": ["work-extras"]}
+  }
+}
