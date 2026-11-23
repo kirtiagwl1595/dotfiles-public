@@ -12,7 +12,7 @@ import sys
 
 import pytest
 from hookrun import ROOT
-from installrun import WIN, calls, fake_managers, home_of, run_install
+from installrun import WIN, calls, fake_managers, home_of, left_over, run_install
 
 YES = "y\n" * 12
 LINK_FILES = {
@@ -21,18 +21,6 @@ LINK_FILES = {
     ".config/starship.toml": "shell/starship.toml",
 }
 ZSH_FILES = {".zshrc": "shell/zsh/.zshrc", ".zprofile": "shell/zsh/.zprofile"}
-SHIM_CACHE = (
-    "Library/Caches/com.apple.python"  # what Apple's /usr/bin python3 shim writes
-)
-
-
-def left_over(home):
-    """Every path in the home folder, except the cache Apple's python3 shim makes on its own."""
-    found = [p.relative_to(home).as_posix() for p in home.rglob("*")]
-    skip = ("Library", "Library/Caches")
-    return [
-        x for x in found if x not in skip and not (x + "/").startswith(SHIM_CACHE + "/")
-    ]
 
 
 def shell(home, *args, answers=None):
@@ -97,7 +85,7 @@ def test_a_second_run_asks_nothing_and_makes_no_new_bak(tmp_path):
     code, out = shell(home, answers=YES)
     assert code == 0, out
     assert not list(home.glob("*.bak"))
-    assert "[y/N]" not in out
+    assert "[y/N]" not in out, out
 
 
 @pytest.mark.skipif(not WIN, reason="the PowerShell profile is for Windows")
@@ -375,6 +363,7 @@ def test_a_restricted_policy_gets_one_hint_and_is_never_changed(
 
 
 # ── macOS defaults: the yes path, on a fake home with a fake defaults ───────
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS defaults run only on macOS")
 def test_macos_defaults_yes_runs_the_script_with_the_flag(tmp_path, monkeypatch):
     home = home_of(tmp_path)
     bin_dir = fake_managers(tmp_path, "defaults", "killall")

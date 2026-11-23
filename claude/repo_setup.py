@@ -447,7 +447,8 @@ def stale_remedy(repo, base, branch):
     A rename is safe only for a local branch that holds setup commits and nothing else:
     other work can live only there, and a pushed branch can have a PR, or be the base of one.
     """
-    at = f"git -C {shlex.quote(str(repo))}"
+    # Forward slashes work in git on every OS; a Windows backslash path would be quoted wrongly
+    at = f"git -C {shlex.quote(repo.as_posix())}"
     span = f"{base.ref}..{branch.ref}"
     setup_only = set(git_out(repo, "log", "--format=%s", span).splitlines()) == {
         SUBJECT
@@ -462,7 +463,7 @@ def stale_remedy(repo, base, branch):
 
 
 def repo_name(repo, root):
-    return str(repo.relative_to(root)) if repo != root else repo.name
+    return repo.relative_to(root).as_posix() if repo != root else repo.name
 
 
 def status(repo, root, untrack):
@@ -603,7 +604,7 @@ def protection_line(repo, name, apply):
 
 def report(root, apply=False, untrack=False):
     repos = find_repos(root)
-    print(f"  ✓ scanning {str(root).replace(str(Path.home()), '~', 1)}")
+    print(f"  ✓ scanning {root.as_posix().replace(Path.home().as_posix(), '~', 1)}")
     if not repos:
         print(f"  ✓ no repos under {root}")
     for repo in repos:

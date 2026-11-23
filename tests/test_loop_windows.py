@@ -62,6 +62,10 @@ def test_guard_loop_returns_before_the_guard_imports_on_windows(tmp_path):
     assert (p.returncode, p.stdout, p.stderr) == (0, "", "")
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="on native Windows guard_loop exits 0 before its imports by design; the faked-win32 tests above cover that side",
+)
 def test_a_failed_import_is_not_swallowed_off_windows(tmp_path):
     # Not on Windows, the same lone copy must fail on its missing imports: no try/except hides it
     lone = tmp_path / "guard_loop.py"

@@ -72,7 +72,8 @@ def repo_setup_lines(repos, *args):
         check=True,
         env=env_for(PYTHONUTF8="1"),
     )
-    return p.stdout.replace(str(repos), "ROOT").splitlines()
+    # The script prints paths with forward slashes on every OS
+    return p.stdout.replace(repos.as_posix(), "ROOT").splitlines()
 
 
 NOTE = "  (no CLAUDE.md: run `claude` there, then /setup-repo)"

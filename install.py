@@ -712,6 +712,7 @@ def powershell_profiles():
             p = subprocess.run(
                 [path, "-NoProfile", "-Command", query],
                 capture_output=True,
+                stdin=subprocess.DEVNULL,  # it must not read the answers meant for ask()
                 text=True,
                 encoding="utf-8",
                 check=False,

@@ -79,3 +79,29 @@ def home_of(tmp_path):
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     return home
+
+
+# Files a program that install.py starts keeps in the home folder by itself. install.py writes none of them.
+SHIM_CACHE = "Library/Caches/com.apple.python"  # Apple's /usr/bin python3 shim (macOS)
+# pwsh and powershell write start-up data when install.py asks them for $PROFILE (Windows)
+POWERSHELL_CACHES = (
+    "AppData/Local/Microsoft/PowerShell/StartupProfileData-NonInteractive",
+    "AppData/Local/Microsoft/Windows/PowerShell/StartupProfileData-NonInteractive",
+)
+
+
+def left_over(home):
+    """Every path in the home folder, except what a started program caches on its own.
+
+    Only those exact files and the folders that lead to them are skipped: a real write by
+    install.py anywhere else, also elsewhere in AppData or Library, still shows."""
+    own = set(POWERSHELL_CACHES)
+    for path in POWERSHELL_CACHES + (SHIM_CACHE,):
+        parts = path.split("/")
+        own.update("/".join(parts[:i]) for i in range(1, len(parts)))
+    found = []
+    for p in home.rglob("*"):
+        x = p.relative_to(home).as_posix()
+        if x not in own and not (x + "/").startswith(SHIM_CACHE + "/"):
+            found.append(x)
+    return sorted(found)

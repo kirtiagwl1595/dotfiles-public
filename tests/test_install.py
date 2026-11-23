@@ -8,6 +8,7 @@ import sys
 
 import pytest
 from hookrun import ROOT, env_for
+from installrun import left_over
 
 INSTALL = ROOT / "install.py"
 SANDBOX_OS = sys.platform != "win32"
@@ -45,7 +46,7 @@ def write_settings(home, data):
 
 
 def files_in(home):
-    return sorted(p.relative_to(home).as_posix() for p in home.rglob("*"))
+    return left_over(home)
 
 
 # ── --check ─────────────────────────────────────────────────────────────────

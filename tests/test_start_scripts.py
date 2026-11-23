@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from hookrun import ROOT, env_for
+from installrun import left_over
 from test_launcher import bash_exe, stub_dir
 
 INSTALL_SH = ROOT / "install.sh"
@@ -50,7 +51,7 @@ def test_sh_check_runs_install_py_and_changes_nothing(tmp_path):
     )
     assert code == 0, out
     assert "Tools" in out and "settings.json" in out
-    assert list(home.iterdir()) == []
+    assert left_over(home) == []
 
 
 def test_sh_without_python_and_without_a_package_manager_says_what_to_do(tmp_path):

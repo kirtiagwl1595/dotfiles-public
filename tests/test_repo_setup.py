@@ -109,7 +109,7 @@ def test_bash_allow_rules_only_where_a_sandbox_exists(repos):
     run("apply", repos)
     settings = committed(repos / "group/web", ".claude/settings.json")
     if os.name == "nt":
-        assert settings is None
+        assert json.loads(settings)["permissions"]["allow"] == []
     else:
         assert "Bash(npm test:*)" in json.loads(settings)["permissions"]["allow"]
 
