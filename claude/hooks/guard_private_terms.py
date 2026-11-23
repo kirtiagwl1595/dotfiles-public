@@ -3,16 +3,31 @@
 names, internal hosts) out of personal places.
 
 Terms live in ~/.config/claude/private-terms.txt, never in a repo (PRIVATE_TERMS_FILE overrides):
-  acme-corp                       blocked in the dotfiles repos, memory and .claude/lessons/
+  acme-corp                       blocked in the dotfiles repos, memory, .claude/lessons/ and
+                                  the .loop/ files of a running loop
   OldName => NewName              old product name: a warning to Claude on any write
 No file: the hook does nothing, so users without one are not affected.
 """
 
 import os
 import re
+import sys
 from pathlib import Path
 
 from _common import HOME, SHELL_TOOLS, norm_path, run_guard
+
+# The loop engine is optional. A failed import exits 1, and exit 1 lets the tool call
+# through: only "no such module" is fine, every other failure blocks.
+try:
+    import _loop
+except ModuleNotFoundError as e:
+    if e.name != "_loop":
+        print("Blocked: the private-terms guard could not load.", file=sys.stderr)
+        sys.exit(2)
+    _loop = None
+except Exception:  # noqa: BLE001 - SyntaxError too, not only ImportError
+    print("Blocked: the private-terms guard could not load.", file=sys.stderr)
+    sys.exit(2)
 
 TERMS = os.environ.get(
     "PRIVATE_TERMS_FILE", os.path.join(HOME, ".config", "claude", "private-terms.txt")
@@ -42,11 +57,28 @@ def load_terms():
     return blocked, renames
 
 
+def loop_file(path):
+    """A file in the `.loop/` folder of a running loop. Its text travels: Cause lines become
+    commit messages, and the bundle and lesson are copied to the main checkout."""
+    if _loop is None:
+        return False
+    p = Path(path)
+    wt = _loop.worktree_root(p.parent)
+    if not wt or p.relative_to(wt).parts[:1] != (_loop.LOOP_DIR,):
+        return False
+    state = _loop.load_state(wt)
+    return bool(state) and state.get("status") in _loop.ACTIVE
+
+
 def personal_place(path):
     # realpath: a symlink into ~/dotfiles is still a personal place
     p = norm_path(os.path.realpath(os.path.expanduser(path))) + "/"
     dotfiles = norm_path(os.path.realpath(DOTFILES)) + "/"
-    return p.startswith(dotfiles) or PERSONAL.search(p) is not None
+    return (
+        p.startswith(dotfiles)
+        or PERSONAL.search(p) is not None
+        or loop_file(os.path.realpath(os.path.expanduser(path)))
+    )
 
 
 def found(term, text):

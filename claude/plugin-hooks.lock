@@ -1,0 +1,3 @@
+# <marketplace>/<plugin> <sha256 of hook and MCP config>, or none.
+# Update: python3 claude/plugin_lock.py update ~/.claude/plugins/cache claude/plugin-hooks.lock --only ...
+# Review the plugin before you lock it.

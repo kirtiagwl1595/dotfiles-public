@@ -8,3 +8,4 @@ __pycache__/
 .claude/.cc-writes/
 .claude/settings.local.json
 CLAUDE.local.md
+.claude/worktrees/
