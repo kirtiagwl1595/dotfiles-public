@@ -28,6 +28,11 @@
       "name": "hf-picks",
       "source": "./plugins/hf-picks",
       "description": "Picked Hugging Face skill (hf-cli), Apache 2.0, pinned 25910b3; leave it disabled until needed"
+    },
+    {
+      "name": "anthropic-skills",
+      "source": "./plugins/anthropic-skills",
+      "description": "Anthropic's docx, pdf, pptx, xlsx and skill-creator skills, Apache 2.0, unmodified"
     }
   ],
   "metadata": {

@@ -12,7 +12,10 @@ This repo adds:
 - **Safe settings**: in default mode, Claude asks before every command outside the sandbox. Bypass mode is off. Auto mode is available with shift+tab; each session starts in default mode.
 - **Token rules**: short answers in a plain writing style (ASD-STE100), and rules that cut token use.
 - **Git defaults**: `main` as the first branch, rebase on pull, prune on fetch, a global ignore file for secrets.
-- **Skills** in the same plugin: `setup-repo`, `token-report` and more. See "Skills". The writing skills, including `ste-visual-first`, are in the optional `writing-skills` plugin.
+- **Skills** in the same plugin: `setup-repo`, `token-report`, `staff-engineer`, `step-back` and more. See "Skills".
+- **Loop engineering**: an improvement loop in an isolated git worktree, judged by hooks. See "Loop engineering".
+- **Optional plugins**: `writing-skills`, `anthropic-skills` (docx, pdf, pptx, xlsx, skill-creator) and 3 picked third-party skills. See "Optional plugins".
+- **Machine setup** (each step asks): packages from one list for `brew`, `apt` and `winget`, shell config (zsh, or a PowerShell profile on Windows), git `delta`, a status line. See "Packages and shell".
 
 What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
@@ -73,6 +76,13 @@ The install adds to your setup. It never removes your own values. It asks before
 | Claude Code plugins | `claude plugin marketplace add <clone>/claude`, then `claude plugin install safe-lean@dotfiles-public`. When the cached plugin copy is older than `claude/.claude-plugin/plugin.json` (after a `git pull`), it asks, then runs `claude plugin update safe-lean@dotfiles-public`. |
 | PATH (only on `y`) | A tool that is installed but not on PATH (for example `~/.local/bin/claude`): macOS and Linux get a `# >>> dotfiles-public PATH >>>` block in `~/.zshrc`, `~/.bash_profile` (bash on macOS), `~/.bashrc` (bash on Linux) or `~/.profile`. Windows gets the folder in the user PATH (registry, not `setx`). |
 | Tools (only on `y`) | A missing tool is installed with the first that it finds: `winget`, `brew`, `apt-get` (with `sudo`). Claude Code without `winget` or `brew`: the installer from the Claude Code setup page. git on macOS without `brew`: `xcode-select --install`. `--skip-tools` only reports. |
+| Packages (only on `y`) | A profile menu, then one question for each package group. See "Packages and shell". |
+| `~/.zshrc`, `~/.zprofile` (only on `y`, macOS and Linux) | A `# >>> dotfiles-public zsh >>>` block that loads `shell/zsh/` from this clone. Your own lines stay. |
+| PowerShell profile (only on `y`, Windows) | A copy of `shell/powershell/Microsoft.PowerShell_profile.ps1` at the path that PowerShell reports (`$PROFILE`), also with OneDrive. |
+| `~/.vimrc`, starship, `.editorconfig`, git `delta`, status line, `CLAUDE.*.example.md` templates (each only on `y`) | A link or a copy (a copy on Windows); the old file becomes `.bak`. |
+| macOS defaults (only on `y`, macOS) | `scripts/macos-defaults.sh`. It saves the old values first. |
+
+Run one step: `./install.sh --only <step>` (Windows: `.\install.cmd --only <step>`). Steps: `tools`, `rules`, `settings`, `git`, `plugin`, `delta`, `shell`, `statusline`, `templates`, `macos`, `packages`.
 
 ## How approval works
 
@@ -99,6 +109,21 @@ All guards run on every OS. They match paths in any case, with `\` or `/`, and w
 
 Every guard starts through `claude/hooks/py.sh`. When it finds no working Python 3.9+, it blocks the tool call (exit 2). A guard that crashes denies the call.
 
+### Hooks that only advise
+
+These hooks start with `py.sh --advisory`: with no Python they do nothing, so they never block your prompts.
+
+| Hook | What it does | On by default |
+|---|---|---|
+| `coach_prompt` | A one-line tip when a disabled plugin of this repo fits your prompt | yes |
+| `churn_watch` | Says when one file was edited many times (a sign of patch-on-patch code) | yes |
+| `after_python_edit` | Runs `ruff format` and `ruff check` on an edited `.py` file, when `ruff` is installed | yes |
+| `graphify_hint` | Points Claude to `graphify-out/` when a repo has a code graph | yes |
+| `notify` | A desktop note when Claude finishes or waits (macOS, Linux `notify-send`, Windows toast) | yes |
+| `test_gate` | Runs the repo's tests at Stop when `.py` files changed. It runs outside the sandbox. | no: create `~/.config/claude/test-gate` |
+| `lesson_gate` | Asks for a lesson file in `.claude/lessons/` after real work | no: create `~/.config/claude/lesson-gate` |
+| `guard_live_checkout` | Blocks edits in a clone you name as "live" | no: list it in `~/.config/claude/live-checkout.txt` |
+
 ## Skills
 
 The plugin brings these skills. In Claude Code, type the name with a `/`, or ask for the task in your own words.
@@ -107,9 +132,65 @@ The plugin brings these skills. In Claude Code, type the name with a `/`, or ask
 |---|---|
 | `/setup-repo` | Makes the current repo Claude-forward: a managed `.gitignore` block, `.claude/settings.json` (no Bash allow rules on Windows), a quiet pytest block, a project `CLAUDE.md`. It commits on `chore/claude-forward` and asks before push and PR. A team repo (its `origin` is not under your user name) gets only local, ignored files. Helpers: `claude/repo_setup.py`, `claude/forge.sh` (picks `gh` or `glab` from `origin`). |
 | `/token-report` | Your Claude Code token use and cost. |
-| `/writing-skills:ste-visual-first` | Picks a table or a diagram over long text. It is in the optional `writing-skills` plugin: `claude plugin install writing-skills@dotfiles-public`. |
+| `/staff-engineer` | A design-first workflow for a feature or a multi-file change: options, risks, tests, then code. |
+| `/step-back` | Stops patch-on-patch code: rewrites special cases into one general rule. |
+| `/slop-audit` | Audits an existing repo for dead code, drift and patch-on-patch code. |
+| `/new-project` | A new Python project with uv, tests, git and a private repo on GitHub or GitLab. |
+| `/rdf-check` | Validates RDF files and runs SPARQL on them with Apache Jena. Install Jena: `scripts/install-jena.sh` (Windows: `scripts/install-jena.ps1`). |
+| `/loop-engineer`, `/loop-audit`, `/loop-approve` | The loop engine. See "Loop engineering". |
 
 `setup-repo` writes `.git/config` and `.claude/settings.json`, which the sandbox denies. Claude runs those single commands outside the sandbox, and each one asks you.
+
+## Optional plugins
+
+Install one with `claude plugin install <name>@dotfiles-public`. Each one adds its skill descriptions to every session, so install only what you use.
+
+| Plugin | Skills | License |
+|---|---|---|
+| `writing-skills` | `ste-visual-first`, `technical-doc-standards`, `winston-presentations`, `fable-agent-patterns` | this repo |
+| `anthropic-skills` | `docx`, `pdf`, `pptx`, `xlsx`, `skill-creator`, by Anthropic, unmodified | Apache 2.0 |
+| `addy-picks` | `doubt-driven-development` | MIT |
+| `ecc-picks` | `eval-harness` | MIT |
+| `hf-picks` | `hf-cli` (Hugging Face) | Apache 2.0 |
+
+`anthropic-skills` is for Claude Code users who do not get these skills from claude.ai. To get Anthropic's updates directly instead:
+
+```
+/plugin marketplace add anthropics/skills
+/plugin install document-skills@anthropic-agent-skills
+/plugin install example-skills@anthropic-agent-skills
+```
+
+## Loop engineering
+
+A loop improves one target (a script, a skill or a repo task) in its own git worktree. Hooks run the checks after each try, keep a gain, revert a loss, and stop at success, at the cap or when nothing improves. You approve the result.
+
+1. Type `/safe-lean:loop-engineer task "<goal>"` (or `script <path>`, `skill <name>`).
+2. Read the goal, checks and scope that Claude shows. Type `/safe-lean:loop-engineer confirm`.
+3. Read the bundle at the end. Accept it with `/safe-lean:loop-approve <slug>`.
+
+The loop engine needs the OS sandbox: macOS, Linux or WSL2. On native Windows its hooks do nothing. Design: [docs/loop-engineering.md](docs/loop-engineering.md).
+
+## Packages and shell
+
+`packages/packages.json` is one list. Each package has a `brew`, an `apt` and a `winget` name, or a note when an OS has none.
+
+| Profile | Groups | brew | apt | winget |
+|---|---|---|---|---|
+| `minimal` | essentials | 5 | 3 | 5 |
+| `developer` | + core-cli, shell, dev-checks, data-utils, fonts | 30 | 19 | 25 |
+| `full` | + utilities, apps | 44 | 25 | 34 |
+| `work` | `developer` + work-extras | 31 | 19 | 26 |
+
+1. Run `./install.sh --only packages` (Windows: `.\install.cmd --only packages`).
+2. Pick a profile by number. `0` skips.
+3. Answer `y` or `N` for each group. Nothing installs before your `y`. On Linux, `apt-get update` runs once before the first install.
+
+Options: `--check` shows the plan only. `--profile <name>` skips the menu. `--manager brew|apt|winget` picks the manager.
+
+Your own packages: `python3 install.py pkg add <name>` installs one and records it as a trial. `pkg keep <name>` moves it to your list. `pkg list` shows both. Both lists (`packages/trials.json`, `packages/local.json`) stay out of git. `pkg brewfile <profile>` prints a Brewfile for `brew bundle`.
+
+Package names for `apt` and `winget` are not all checked on a real machine. Check them with `scripts/check-package-names.sh brew|apt|winget`.
 
 ## Verify
 
@@ -144,8 +225,9 @@ Do these checks in Claude Code after the restart.
 2. Put each `.bak` copy back: `~/.claude/CLAUDE.md.bak`, `~/.claude/settings.json.bak`, `~/.gitconfig.bak`. Without a `.bak` copy, the file did not exist before: delete it.
 3. If the install set it: `git config --global --unset core.excludesFile`.
 4. PATH: delete the `dotfiles-public PATH` block from your shell file (the `.bak` copy has the old file). Windows: Settings > System > About > Advanced system settings > Environment Variables, then remove the folder from the user `Path`.
-5. A tool that the install installed: remove it with the same package manager (`brew uninstall`, `winget uninstall`, `sudo apt-get remove`).
-6. Restart Claude Code.
+5. A tool or package that the install installed: remove it with the same package manager (`brew uninstall`, `winget uninstall`, `sudo apt-get remove`).
+6. Shell: delete the `dotfiles-public zsh` block from `~/.zshrc` and `~/.zprofile`. Other shell files: put the `.bak` copy back. Windows: delete the copied PowerShell profile (`$PROFILE`).
+7. Restart Claude Code.
 
 ## Development
 

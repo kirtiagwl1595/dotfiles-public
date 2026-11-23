@@ -1,6 +1,6 @@
 {
   "name": "safe-lean",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Guards for macOS, Linux and Windows: secrets, private terms, pip, main branch and compound-command checks, for the Bash and PowerShell tools and the file tools. Skills: setup-repo, token-report, staff-engineer, step-back, slop-audit, new-project, rdf-check and the loop engine (loop-engineer, loop-audit, loop-approve).",
   "author": {
     "name": "kirtiagwl1595"

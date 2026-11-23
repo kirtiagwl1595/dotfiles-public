@@ -1,0 +1,8 @@
+{
+  "name": "anthropic-skills",
+  "version": "1.0.0",
+  "description": "Anthropic's docx, pdf, pptx, xlsx and skill-creator skills, Apache 2.0, unmodified copies. For Claude Code users without these skills from claude.ai.",
+  "author": { "name": "Anthropic, PBC" },
+  "homepage": "https://github.com/anthropics/skills",
+  "license": "Apache-2.0"
+}
