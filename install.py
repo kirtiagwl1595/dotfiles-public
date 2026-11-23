@@ -697,20 +697,20 @@ def documents_folder():
 def powershell_profiles():
     """[(path, policy)] for each PowerShell here: the file it reads at start, its execution policy.
 
-    PowerShell 7 (pwsh) and Windows PowerShell 5.1 (powershell) are asked, because OneDrive
-    can move Documents. If the question fails, the usual folder is the guess (policy None).
+    The path is Documents\\<PowerShell or WindowsPowerShell>\\Microsoft.PowerShell_profile.ps1,
+    with Documents from the registry: it follows a OneDrive move and is the same on every run.
+    PowerShell is asked only for its execution policy (None when the question fails); its own
+    $PROFILE answer is not used, because 5.1 and 7 can resolve Documents differently.
     A computer with neither program gets no entry: no shell would read the file.
     """
-    query = "$PROFILE.CurrentUserCurrentHost; Get-ExecutionPolicy"
     found = []
     for exe, folder in (("pwsh", "PowerShell"), ("powershell", "WindowsPowerShell")):
         path = shutil.which(exe)
         if not path:
             continue
-        guess = documents_folder() / folder / "Microsoft.PowerShell_profile.ps1"
         try:
             p = subprocess.run(
-                [path, "-NoProfile", "-Command", query],
+                [path, "-NoProfile", "-Command", "Get-ExecutionPolicy"],
                 capture_output=True,
                 stdin=subprocess.DEVNULL,  # it must not read the answers meant for ask()
                 text=True,
@@ -718,17 +718,11 @@ def powershell_profiles():
                 check=False,
                 timeout=60,
             )
-            lines = p.stdout.split("\n") if p.returncode == 0 else []
-            lines = [x.strip() for x in lines if x.strip()]
+            policy = p.stdout.strip() if p.returncode == 0 else ""
         except (OSError, subprocess.TimeoutExpired):
-            lines = []
-        entry = (
-            (Path(lines[0]), lines[1] if len(lines) > 1 else None)
-            if lines
-            else (guess, None)
-        )
-        if entry[0] not in [f[0] for f in found]:
-            found.append(entry)
+            policy = ""
+        target = documents_folder() / folder / "Microsoft.PowerShell_profile.ps1"
+        found.append((target, policy or None))
     return found
 
 

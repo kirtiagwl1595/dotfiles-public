@@ -311,22 +311,29 @@ def ps_targets(mod):
     return [dst for src, dst in mod.config_files() if src.suffix == ".ps1"]
 
 
-def test_the_profile_path_comes_from_powershell_itself(windows, tmp_path, monkeypatch):
-    mod, _ = windows
-    one = tmp_path / "OneDrive" / "Documents" / "PowerShell" / "p.ps1"
-    old = tmp_path / "OneDrive" / "Documents" / "WindowsPowerShell" / "p.ps1"
-    answers = {"pwsh": f"{one}\nRemoteSigned\n", "powershell": f"{old}\nRemoteSigned\n"}
-    use(mod, monkeypatch, answers)
-    assert ps_targets(mod) == [one, old]
-
-
-def test_the_profile_path_falls_back_to_documents_when_the_query_fails(
-    windows, monkeypatch
+def test_the_profile_path_follows_the_registry_documents_folder(
+    windows, tmp_path, monkeypatch
 ):
+    """The registry value of Documents follows a OneDrive move, and it is the same on every
+    run. PowerShell's own $PROFILE answer is not used: 5.1 and 7 can resolve it differently."""
+    mod, _ = windows
+    docs = tmp_path / "OneDrive" / "Documents"
+    monkeypatch.setattr(mod, "documents_folder", lambda: docs)
+    use(mod, monkeypatch, {"pwsh": "RemoteSigned\n", "powershell": "RemoteSigned\n"})
+    name = "Microsoft.PowerShell_profile.ps1"
+    assert ps_targets(mod) == [
+        docs / "PowerShell" / name,
+        docs / "WindowsPowerShell" / name,
+    ]
+
+
+def test_two_runs_give_the_same_profile_paths(windows, monkeypatch):
     mod, home = windows
-    use(mod, monkeypatch, {"pwsh": ""})
-    (target,) = ps_targets(mod)
-    assert target.parent == home / "Documents" / "PowerShell"
+    monkeypatch.setattr(mod, "documents_folder", lambda: home / "Documents")
+    use(mod, monkeypatch, {"pwsh": "RemoteSigned\n", "powershell": ""})
+    first = ps_targets(mod)
+    use(mod, monkeypatch, {"pwsh": "Restricted\n", "powershell": "Bypass\n"})
+    assert ps_targets(mod) == first
 
 
 def test_no_powershell_means_no_profile_is_offered(windows, monkeypatch):
@@ -342,20 +349,22 @@ def test_the_parent_folder_of_the_profile_is_made_and_the_file_copied(
     windows, tmp_path, monkeypatch
 ):
     mod, _ = windows
-    target = tmp_path / "OneDrive" / "Documents" / "PowerShell" / "p.ps1"
-    use(mod, monkeypatch, {"pwsh": f"{target}\nRemoteSigned\n"})
+    docs = tmp_path / "OneDrive" / "Documents"
+    monkeypatch.setattr(mod, "documents_folder", lambda: docs)
+    use(mod, monkeypatch, {"pwsh": "RemoteSigned\n"})
     monkeypatch.setattr(mod, "ask", lambda *a, **k: True)
+    target = docs / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
     src = next(s for s, d in mod.config_files() if d == target)
     mod.place(mod.Report(False), src, target)
     assert target.read_bytes() == src.read_bytes()
 
 
 def test_a_restricted_policy_gets_one_hint_and_is_never_changed(
-    windows, tmp_path, monkeypatch, capsys
+    windows, monkeypatch, capsys
 ):
-    mod, _ = windows
-    target = tmp_path / "Documents" / "PowerShell" / "p.ps1"
-    fake = use(mod, monkeypatch, {"pwsh": f"{target}\nRestricted\n"})
+    mod, home = windows
+    monkeypatch.setattr(mod, "documents_folder", lambda: home / "Documents")
+    fake = use(mod, monkeypatch, {"pwsh": "Restricted\n"})
     mod.setup_shell(mod.Report(True))
     out = capsys.readouterr().out
     assert out.count("Set-ExecutionPolicy") == 1

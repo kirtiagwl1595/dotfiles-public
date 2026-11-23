@@ -95,7 +95,7 @@ def left_over(home):
 
     Only those exact files and the folders that lead to them are skipped: a real write by
     install.py anywhere else, also elsewhere in AppData or Library, still shows."""
-    own = set(POWERSHELL_CACHES)
+    own = set(POWERSHELL_CACHES) | {"AppData/Roaming"}  # PowerShell makes it, empty
     for path in POWERSHELL_CACHES + (SHIM_CACHE,):
         parts = path.split("/")
         own.update("/".join(parts[:i]) for i in range(1, len(parts)))

@@ -590,3 +590,14 @@ def test_named_env_files_are_flagged(repos, name):
     make_repo(repos / "named", {"app.py": "x = 1\n", name: "API_KEY=abc\n"})
     out = "\n".join(repo_setup_lines(repos, "plan", str(repos)))
     assert f"named: personal/secret files are tracked: {name}" in out
+
+
+def test_printed_paths_use_forward_slashes_on_every_os():
+    """A Windows path prints with / like every other: git takes it, and the hint is one line
+    that a user can copy into Git Bash or PowerShell."""
+    from pathlib import PureWindowsPath
+
+    root = PureWindowsPath(r"C:\Users\x\git")
+    _, hint = repo_setup.secret_warnings("web", ["CLAUDE.local.md"], root, True)
+    assert hint.endswith(" repo_setup.py apply C:/Users/x/git --untrack")
+    assert "\\" not in hint

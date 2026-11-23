@@ -291,10 +291,10 @@ def main_checkout(repo):
     """The main checkout of `repo`: worktrees share its .git and read its local settings."""
     common = git(repo, "rev-parse", "--git-common-dir")
     if not common:
-        raise Refused(f"{repo}: not a git repo")
+        raise Refused(f"{shown(repo)}: not a git repo")
     folder = (repo / common).resolve()
     if folder.name != ".git":
-        raise Refused(f"{repo}: no plain checkout (bare repo or submodule)")
+        raise Refused(f"{shown(repo)}: no plain checkout (bare repo or submodule)")
     return folder.parent
 
 
@@ -313,19 +313,21 @@ def protection(repo):
     if covered(main):
         return None
     if set("*?[]{}()!\\") & set(str(main)):
-        raise Refused(f"{main}: this path cannot be written as a permission rule")
+        raise Refused(
+            f"{shown(main)}: this path cannot be written as a permission rule"
+        )
     path = main / LOCAL
     # This runs outside the sandbox: a planted link would choose what it overwrites
     if path.is_symlink() or path.parent.is_symlink():
-        raise Refused(f"{path}: is or is below a symlink, not written")
+        raise Refused(f"{shown(path)}: is or is below a symlink, not written")
     if not ok(main, "check-ignore", "-q", LOCAL):
         raise Refused(
-            f"{path}: git does not ignore it, not written (install.sh --only git links the global ignore)"
+            f"{shown(path)}: git does not ignore it, not written (install.sh --only git links the global ignore)"
         )
     try:
         user = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     except ValueError:
-        raise Refused(f"{path}: not valid JSON") from None
+        raise Refused(f"{shown(path)}: not valid JSON") from None
     wanted = [f"Edit(/{main}/.git/{name})" for name in ("config", "hooks/**")]
     merged = merge(user, {"permissions": {"deny": wanted}})
     try:
@@ -333,7 +335,7 @@ def protection(repo):
     except (TypeError, KeyError):
         locked = False
     if not locked:  # merge lets the user's value win, so another shape stays as it is
-        raise Refused(f"{path}: permissions.deny is not a list")
+        raise Refused(f"{shown(path)}: permissions.deny is not a list")
     return None if merged == user else (path, json.dumps(merged, indent=2) + "\n")
 
 
@@ -417,6 +419,12 @@ def staleness(base, branch, langs):
     return "older setup" if changes(branch, langs) else ""
 
 
+def shown(path):
+    """A path as the user sees it: forward slashes on every OS. git and both Windows shells
+    take them, so one printed hint works everywhere."""
+    return path.as_posix() if hasattr(path, "as_posix") else str(path)
+
+
 def secret_warnings(name, personal, root, can_untrack):
     """The lines that name tracked personal files, and how to untrack them."""
     if not personal:
@@ -429,7 +437,7 @@ def secret_warnings(name, personal, root, can_untrack):
         return [tracked]
     hint = (
         "      To untrack (copy the files first: merging that commit deletes them from disk):"
-        f" repo_setup.py apply {root} --untrack"
+        f" repo_setup.py apply {shown(root)} --untrack"
     )
     return [tracked, hint]
 
@@ -447,8 +455,7 @@ def stale_remedy(repo, base, branch):
     A rename is safe only for a local branch that holds setup commits and nothing else:
     other work can live only there, and a pushed branch can have a PR, or be the base of one.
     """
-    # Forward slashes work in git on every OS; a Windows backslash path would be quoted wrongly
-    at = f"git -C {shlex.quote(repo.as_posix())}"
+    at = f"git -C {shlex.quote(shown(repo))}"
     span = f"{base.ref}..{branch.ref}"
     setup_only = set(git_out(repo, "log", "--format=%s", span).splitlines()) == {
         SUBJECT
@@ -463,7 +470,7 @@ def stale_remedy(repo, base, branch):
 
 
 def repo_name(repo, root):
-    return repo.relative_to(root).as_posix() if repo != root else repo.name
+    return shown(repo.relative_to(root)) if repo != root else repo.name
 
 
 def status(repo, root, untrack):
@@ -604,9 +611,9 @@ def protection_line(repo, name, apply):
 
 def report(root, apply=False, untrack=False):
     repos = find_repos(root)
-    print(f"  ✓ scanning {root.as_posix().replace(Path.home().as_posix(), '~', 1)}")
+    print(f"  ✓ scanning {shown(root).replace(shown(Path.home()), '~', 1)}")
     if not repos:
-        print(f"  ✓ no repos under {root}")
+        print(f"  ✓ no repos under {shown(root)}")
     for repo in repos:
         name = repo_name(repo, root)
         try:
